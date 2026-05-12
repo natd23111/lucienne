@@ -4,8 +4,16 @@ import java.awt.*;
 public class LucienneGame extends JFrame {
     private CardLayout cardLayout;
     private JPanel mainPanel;
+    private Player player;
+    private ProgressManager progressManager;
 
     public LucienneGame() {
+        // Load saved progress
+        progressManager = new ProgressManager();
+        int savedScore = progressManager.loadScore();
+        player = new Player("Jeff"); // Default player name
+        player.setScore(savedScore);
+
         setTitle("Lucienne: Quest for Quality Education");
         setSize(360, 640); // Smartphone resolution [cite: 67]
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -16,6 +24,7 @@ public class LucienneGame extends JFrame {
 
         // Add Screens here
         mainPanel.add(createWelcomeScreen(), "Welcome");
+        mainPanel.add(new VillagePanel(cardLayout, mainPanel, player), "Village");
 
         // Registering game screens
         mainPanel.add(new LearningPanel(cardLayout, mainPanel), "KnowledgeGarden");
