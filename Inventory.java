@@ -1,3 +1,5 @@
+package Project;
+
 import java.util.HashMap;
 
 public class Inventory implements Interactable {
