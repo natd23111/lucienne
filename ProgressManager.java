@@ -19,7 +19,9 @@ public class ProgressManager {
         try (Scanner scanner = new Scanner(new File(FILE_PATH))) {
             if (scanner.hasNextLine()) {
                 String[] parts = scanner.nextLine().split(":");
-                return Integer.parseInt(parts[1]);
+                if (parts.length >= 2) {
+                    return Integer.parseInt(parts[1]);
+                }
             }
         } catch (FileNotFoundException e) {
             System.out.println("No save file found. Starting fresh.");

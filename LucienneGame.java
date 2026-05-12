@@ -16,6 +16,11 @@ public class LucienneGame extends JFrame {
 
         // Add Screens here
         mainPanel.add(createWelcomeScreen(), "Welcome");
+
+        // Registering game screens
+        mainPanel.add(new LearningPanel(cardLayout, mainPanel), "KnowledgeGarden");
+        mainPanel.add(new BattlePanel(cardLayout, mainPanel), "BattleGround");
+        mainPanel.add(new ShopPanel(cardLayout, mainPanel), "VillageShop");
         
         add(mainPanel);
         setVisible(true);
