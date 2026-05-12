@@ -4,16 +4,17 @@ import java.util.HashMap;
 
 public class Inventory implements Interactable {
     private HashMap<String, Integer> items = new HashMap<>();
-    private int knowledgePoints;
+    private Player player;
 
-    public Inventory(int startingKnowledgePoints) {
-        this.knowledgePoints = startingKnowledgePoints;
+    public Inventory(Player player) {
+        this.player = player;
     }
 
     @Override
     public void buyItem(String itemName, int cost) {
-        if (knowledgePoints >= cost) {
-            knowledgePoints -= cost;
+        if (player.getScore() >= cost) {
+            // Currency is handled by the Player/Shop logic, 
+            // we just add the item to the map here.
             items.put(itemName, items.getOrDefault(itemName, 0) + 1);
             System.out.println("Bought: " + itemName);
         }
@@ -28,6 +29,6 @@ public class Inventory implements Interactable {
     }
 
     public int getKnowledgePoints() {
-        return knowledgePoints;
+        return player.getScore();
     }
 }

@@ -2,7 +2,7 @@ package Project;
 
 public class BattleEngine {
     public String getMotivationalMessage(int score, int totalQuestions) {
-        double percentage = ((double) score / totalQuestions) * 100;
+        double percentage = (totalQuestions > 0) ? ((double) score / totalQuestions) * 100 : 0;
 
         if (percentage >= 80) {
             return "Outstanding! You are a true Guardian of Wisdom!";

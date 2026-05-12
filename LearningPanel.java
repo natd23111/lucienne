@@ -8,11 +8,13 @@ import java.util.Map;
 public class LearningPanel extends JPanel {
     private CardLayout cardLayout;
     private JPanel mainPanel;
+    private BattlePanel battlePanel;
     private QuestionParser parser;
 
-    public LearningPanel(CardLayout cardLayout, JPanel mainPanel) {
+    public LearningPanel(CardLayout cardLayout, JPanel mainPanel, BattlePanel battlePanel) {
         this.cardLayout = cardLayout;
         this.mainPanel = mainPanel;
+        this.battlePanel = battlePanel;
         this.parser = new QuestionParser();
 
         setLayout(new BorderLayout());
@@ -37,8 +39,7 @@ public class LearningPanel extends JPanel {
             
             categoryBtn.addActionListener(e -> {
                 List<Question> questionsForCategory = categorizedQuestions.get(category);
-                // Transition logic: You can now pass 'questionsForCategory' to the BattlePanel
-                JOptionPane.showMessageDialog(this, "Studying: " + category + "\nQuestions found: " + questionsForCategory.size());
+                battlePanel.startBattle(questionsForCategory);
                 cardLayout.show(mainPanel, "BattleGround");
             });
 
