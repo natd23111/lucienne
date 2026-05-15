@@ -59,7 +59,7 @@ public class ShopPanel extends JPanel {
                 kpLabel.setText("Current KP: " + player.getScore());
                 villagePanel.updateDisplay();
                 JOptionPane.showMessageDialog(this, "Purchased " + itemName + "!");
-                progressManager.saveScore(player.getName(), player.getScore());
+                progressManager.saveProgress(player);
             } else {
                 JOptionPane.showMessageDialog(this, "Not enough Knowledge Points!");
             }

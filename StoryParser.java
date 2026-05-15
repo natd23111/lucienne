@@ -1,0 +1,54 @@
+package Project;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+public class StoryParser {
+    private static final String FILE_PATH = "story.txt";
+
+    public Map<String, Scene> parseStory() {
+        Map<String, Scene> scenes = new HashMap<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
+            String line;
+            Scene currentScene = null;
+
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+
+                if (line.startsWith("Scene:")) {
+                    String id = line.substring("Scene:".length()).trim();
+                    currentScene = new Scene(id, "");
+                    scenes.put(id, currentScene);
+                } else if (line.startsWith("Text:") && currentScene != null) {
+                    String text = line.substring("Text:".length()).trim();
+                    // Handle explicit newlines in the text file
+                    text = text.replace("\\n", "\n");
+                    // In a real scenario, you might want to builder multiple lines of text
+                    currentScene = new Scene(currentScene.getSceneId(), text);
+                    scenes.put(currentScene.getSceneId(), currentScene);
+                } else if (line.startsWith("Choice") && currentScene != null) {
+                    int arrowIndex = line.indexOf("->");
+                    int colonIndex = line.indexOf(":");
+                    if (arrowIndex != -1 && colonIndex != -1) {
+                        String choiceText = line.substring(colonIndex + 1, arrowIndex).trim();
+                        // Remove quotes
+                        if (choiceText.startsWith("\"") && choiceText.endsWith("\"")) {
+                            choiceText = choiceText.substring(1, choiceText.length() - 1);
+                        }
+                        String nextSceneId = line.substring(arrowIndex + 2).trim();
+                        currentScene.addChoice(choiceText, nextSceneId);
+                    }
+                } else if (line.startsWith("End:") && currentScene != null) {
+                    currentScene.setEnding(true);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading story file: " + e.getMessage());
+        }
+        return scenes;
+    }
+}

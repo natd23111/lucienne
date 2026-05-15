@@ -64,7 +64,7 @@ public class BattlePanel extends JPanel {
                 JButton btn = new JButton(option);
                 btn.setAlignmentX(Component.CENTER_ALIGNMENT);
                 btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-                btn.addActionListener(e -> handleAnswer(option, q.getCorrectAnswer()));
+                btn.addActionListener(e -> handleAnswer(q, option));
                 
                 optionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
                 optionsPanel.add(btn);
@@ -76,8 +76,8 @@ public class BattlePanel extends JPanel {
         optionsPanel.repaint();
     }
 
-    private void handleAnswer(String selected, String correct) {
-        if (selected.trim().equalsIgnoreCase(correct.trim())) {
+    private void handleAnswer(Question q, String selected) {
+        if (q.checkAnswer(selected)) {
             correctAnswersCount++;
             player.addScore(10);
             JOptionPane.showMessageDialog(this, "Correct! Knowledge fragment restored.");
@@ -91,7 +91,7 @@ public class BattlePanel extends JPanel {
     private void finishBattle() {
         String message = battleEngine.getMotivationalMessage(correctAnswersCount, currentQuestions.size());
         JOptionPane.showMessageDialog(this, "Battle Result: " + correctAnswersCount + "/" + currentQuestions.size() + "\n" + message);
-        progressManager.saveScore(player.getName(), player.getScore());
+        progressManager.saveProgress(player);
         villagePanel.updateDisplay();
         cardLayout.show(mainPanel, "Village");
     }

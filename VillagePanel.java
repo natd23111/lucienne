@@ -45,7 +45,7 @@ public class VillagePanel extends JPanel {
 
         JButton saveGameBtn = new JButton("Save Game");
         saveGameBtn.addActionListener(e -> {
-            new ProgressManager().saveScore(player.getName(), player.getScore());
+            new ProgressManager().saveProgress(player);
             JOptionPane.showMessageDialog(this, "Progress Saved to savegame.txt!");
         });
         menuPanel.add(saveGameBtn);

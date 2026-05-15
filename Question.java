@@ -48,11 +48,17 @@ public class Question {
     }
 
     public boolean checkAnswer(String userAnswer) {
-        // Normalize answers for comparison (e.g., trim whitespace, ignore case for True/False)
-        if ("True/False".equalsIgnoreCase(type)) {
-            return correctAnswer.trim().equalsIgnoreCase(userAnswer.trim());
+        String user = userAnswer.trim();
+        String correct = correctAnswer.trim();
+
+        if ("Multiple Choice".equalsIgnoreCase(type)) {
+            // Check if user clicked a button like "A) Text" when correct is "A"
+            // or if the button text matches the answer key exactly.
+            return user.equalsIgnoreCase(correct) || user.startsWith(correct + ")");
         }
-        return correctAnswer.trim().equals(userAnswer.trim());
+
+        // For True/False, handle cases like "False (explanation...)" matching "False"
+        return correct.toLowerCase().startsWith(user.toLowerCase());
     }
 
     @Override

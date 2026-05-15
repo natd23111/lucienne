@@ -2,6 +2,7 @@ package Project;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Map;
 
 public class LucienneGame extends JFrame {
     private CardLayout cardLayout;
@@ -12,9 +13,8 @@ public class LucienneGame extends JFrame {
     public LucienneGame() {
         // Load saved progress
         progressManager = new ProgressManager();
-        int savedScore = progressManager.loadScore();
         player = new Player("Jeff"); // Default player name
-        player.setScore(savedScore);
+        progressManager.loadProgress(player);
 
         setTitle("Lucienne: Quest for Quality Education");
         setSize(360, 640); // Smartphone resolution [cite: 67]
@@ -26,10 +26,13 @@ public class LucienneGame extends JFrame {
 
         BattleEngine engine = new BattleEngine();
         Inventory inventory = new Inventory(player);
+        StoryParser storyParser = new StoryParser();
+        Map<String, Scene> scenes = storyParser.parseStory();
 
         VillagePanel villagePanel = new VillagePanel(cardLayout, mainPanel, player);
         BattlePanel battlePanel = new BattlePanel(cardLayout, mainPanel, player, engine, villagePanel);
         ShopPanel shopPanel = new ShopPanel(cardLayout, mainPanel, player, inventory, villagePanel);
+        StoryPanel storyPanel = new StoryPanel(cardLayout, mainPanel, player, scenes);
 
         // Add Screens here
         mainPanel.add(createWelcomeScreen(), "Welcome");
@@ -39,6 +42,7 @@ public class LucienneGame extends JFrame {
         mainPanel.add(new LearningPanel(cardLayout, mainPanel, battlePanel), "KnowledgeGarden");
         mainPanel.add(battlePanel, "BattleGround");
         mainPanel.add(shopPanel, "VillageShop");
+        mainPanel.add(storyPanel, "Story");
         
         add(mainPanel);
         setVisible(true);
@@ -50,7 +54,7 @@ public class LucienneGame extends JFrame {
         JButton startBtn = new JButton("Start Journey");
         
         // This is how you switch screens
-        startBtn.addActionListener(e -> cardLayout.show(mainPanel, "Village"));
+        startBtn.addActionListener(e -> cardLayout.show(mainPanel, "Story"));
         
         panel.add(label, BorderLayout.CENTER);
         panel.add(startBtn, BorderLayout.SOUTH);

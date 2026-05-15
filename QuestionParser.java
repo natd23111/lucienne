@@ -49,7 +49,10 @@ public class QuestionParser {
                         }
                         answerLine = line; // This line should be the "Answer:" line
                     } else { // True/False, just read the next line for the answer
-                        answerLine = reader.readLine();
+                        while ((line = reader.readLine()) != null && !line.trim().startsWith("Answer:")) {
+                            // Skip blank lines or trailing question text lines
+                        }
+                        answerLine = line;
                     }
 
                     if (answerLine != null && answerLine.trim().startsWith("Answer:")) {
