@@ -1,3 +1,7 @@
+Scene: jeff_bedroom
+Text: Night has fallen over the quiet town. Jeff, a curious boy with a love for learning, lies in his bed staring at the ceiling.\n\nHis room is filled with books, maps, and trinkets from faraway places—remnants of a thousand imagined adventures. But tonight, something feels different.\n\nThe moonlight streaming through his window seems to shimmer with an unusual glow. His eyelids grow heavy, and the world around him begins to blur.\n\nAs sleep takes hold, the familiar walls of his bedroom dissolve into mist. He finds himself standing not on carpet, but on soft sand, with the sound of waves crashing nearby...\n\nJeff has crossed into Lucienne—a mystical kingdom where the very essence of knowledge has vanished. The air hums with forgotten wisdom, and the land itself seems to call out for a hero.
+Choice 1: "Drift into the dream..." -> intro_arrival
+
 Scene: intro_arrival
 Text: You awaken on the shores of Lucienne, a mystical island where knowledge is power.\nA shimmering crystal monument towers above the village. As you approach, an elderly guide emerges from the mist.\n\n"Welcome, seeker. I sense great potential within you. But before you begin your quest, a choice awaits..."\n\nThe guide gestures to two paths before you.
 Choice 1: "I seek knowledge to help my community" -> path_scholar

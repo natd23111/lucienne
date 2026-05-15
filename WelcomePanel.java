@@ -27,7 +27,7 @@ public class WelcomePanel extends BaseGamePanel {
 
         menuPanel.add(createMenuButton("New Quest", e -> {
             player.setScore(0);
-            player.setCurrentStoryScene("intro_arrival");
+            player.setCurrentStoryScene("jeff_bedroom");
             storyPanel.resetToCurrent();
             cardLayout.show(mainPanel, "Story");
         }));

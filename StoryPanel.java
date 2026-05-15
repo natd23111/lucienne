@@ -362,6 +362,8 @@ public class StoryPanel extends BaseGamePanel {
 
     private String formatSceneTitle(String sceneId) {
         switch (sceneId) {
+            case "jeff_bedroom":
+                return "--- Jeff's Bedroom ---";
             case "intro_arrival":
                 return "--- The Shores of Lucienne ---";
             case "path_scholar":
