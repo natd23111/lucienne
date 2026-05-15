@@ -2,6 +2,8 @@ package Project;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LucienneGame extends JFrame {
@@ -57,7 +59,7 @@ public class LucienneGame extends JFrame {
         mainPanel.add(villagePanel, "Village");
 
         // Registering game screens
-        mainPanel.add(new LearningPanel(cardLayout, mainPanel, battlePanel), "KnowledgeGarden");
+        mainPanel.add(new LearningPanel(cardLayout, mainPanel, player, battlePanel), "KnowledgeGarden");
         mainPanel.add(battlePanel, "BattleGround");
         mainPanel.add(shopPanel, "VillageShop");
         mainPanel.add(storyPanel, "Story");

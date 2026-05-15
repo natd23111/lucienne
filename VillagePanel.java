@@ -3,16 +3,11 @@ package Project;
 import javax.swing.*;
 import java.awt.*;
 
-public class VillagePanel extends JPanel {
-    private CardLayout cardLayout;
-    private JPanel mainPanel;
-    private Player player;
+public class VillagePanel extends BaseGamePanel {
     private JLabel scoreLabel;
 
     public VillagePanel(CardLayout cardLayout, JPanel mainPanel, Player player) {
-        this.cardLayout = cardLayout;
-        this.mainPanel = mainPanel;
-        this.player = player;
+        super(cardLayout, mainPanel, player);
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));

@@ -80,18 +80,22 @@ public class QuestionParser implements ResourceParser<List<Question>> {
     // Example main method for testing
     public static void main(String[] args) {
         QuestionParser parser = new QuestionParser();
-        Map<String, List<Question>> questions = parser.parseQuestions();
+        try {
+            Map<String, List<Question>> questions = parser.parse();
 
-        for (Map.Entry<String, List<Question>> entry : questions.entrySet()) {
-            System.out.println("Category: " + entry.getKey());
-            for (Question q : entry.getValue()) {
-                System.out.println("  " + q.getQuestionText());
-                if (!q.getOptions().isEmpty()) {
-                    q.getOptions().forEach(option -> System.out.println("    " + option));
+            for (Map.Entry<String, List<Question>> entry : questions.entrySet()) {
+                System.out.println("Category: " + entry.getKey());
+                for (Question q : entry.getValue()) {
+                    System.out.println("  " + q.getQuestionText());
+                    if (!q.getOptions().isEmpty()) {
+                        q.getOptions().forEach(option -> System.out.println("    " + option));
+                    }
+                    System.out.println("  Correct Answer: " + q.getCorrectAnswer());
+                    System.out.println("---");
                 }
-                System.out.println("  Correct Answer: " + q.getCorrectAnswer());
-                System.out.println("---");
             }
+        } catch (GameDataException e) {
+            e.printStackTrace();
         }
     }
 }

@@ -2,18 +2,16 @@ package Project;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LearningPanel extends JPanel {
-    private CardLayout cardLayout;
-    private JPanel mainPanel;
+public class LearningPanel extends BaseGamePanel {
     private BattlePanel battlePanel;
     private QuestionParser parser;
 
-    public LearningPanel(CardLayout cardLayout, JPanel mainPanel, BattlePanel battlePanel) {
-        this.cardLayout = cardLayout;
-        this.mainPanel = mainPanel;
+    public LearningPanel(CardLayout cardLayout, JPanel mainPanel, Player player, BattlePanel battlePanel) {
+        super(cardLayout, mainPanel, player);
         this.battlePanel = battlePanel;
         this.parser = new QuestionParser();
 
@@ -30,15 +28,23 @@ public class LearningPanel extends JPanel {
         categoryContainer.setLayout(new BoxLayout(categoryContainer, BoxLayout.Y_AXIS));
 
         // Parse questions and create a button for each unique category
-        Map<String, List<Question>> categorizedQuestions = parser.parseQuestions();
+        Map<String, List<Question>> questionsMap;
+        try {
+            questionsMap = parser.parse();
+        } catch (GameDataException e) {
+            JOptionPane.showMessageDialog(this, "Error loading questions: " + e.getMessage());
+            questionsMap = new HashMap<>();
+        }
+        final Map<String, List<Question>> categorizedQuestions = questionsMap;
 
         for (String category : categorizedQuestions.keySet()) {
-            JButton categoryBtn = new JButton(category);
+            final String categoryName = category; // Explicitly capture for lambda
+            JButton categoryBtn = new JButton(categoryName);
             categoryBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
             categoryBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
             
             categoryBtn.addActionListener(e -> {
-                List<Question> questionsForCategory = categorizedQuestions.get(category);
+                List<Question> questionsForCategory = categorizedQuestions.get(categoryName);
                 battlePanel.startBattle(questionsForCategory);
                 cardLayout.show(mainPanel, "BattleGround");
             });
