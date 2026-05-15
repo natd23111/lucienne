@@ -1,1 +1,1 @@
-Jeff:10:journey_start
+Jeff:60:journey_start
