@@ -5,12 +5,20 @@ import java.awt.*;
 
 public class VillagePanel extends BaseGamePanel {
     private JLabel scoreLabel;
+    // Placeholder for a character sprite
+    private Image heroSprite;
+    private int heroX = 150;
+    private int heroY = 400;
 
     public VillagePanel(CardLayout cardLayout, JPanel mainPanel, Player player) {
         super(cardLayout, mainPanel, player);
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // You can now set a background! 
+        // setBackgroundImage("assets/village_bg.png");
+        // heroSprite = new ImageIcon("assets/jeff_sprite.png").getImage();
 
         // Progress Visualization Header
         JPanel statsPanel = new JPanel(new GridLayout(2, 1));
@@ -55,5 +63,15 @@ public class VillagePanel extends BaseGamePanel {
     // Refresh visual progress (call this when returning to the village)
     public void updateDisplay() {
         scoreLabel.setText("Knowledge Points: " + player.getScore());
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g); // Draws the background from BaseGamePanel
+        
+        // This is where the "Real Game" magic happens
+        if (heroSprite != null) {
+            g.drawImage(heroSprite, heroX, heroY, 64, 64, this);
+        }
     }
 }
