@@ -18,7 +18,6 @@ public class Player {
 
     public String getName() { return name; }
     public int getScore() { return score; }
-    public void setScore(int score) { this.score = score; }
     public void setScore(int score) {
         if (score < 0) {
             this.score = 0; // Prevent negative scores

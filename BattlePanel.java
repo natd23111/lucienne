@@ -4,10 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
-public class BattlePanel extends JPanel {
-    private CardLayout cardLayout;
-    private JPanel mainPanel;
-    private Player player;
+public class BattlePanel extends BaseGamePanel {
     private BattleEngine battleEngine;
     private ProgressManager progressManager;
     private VillagePanel villagePanel;
@@ -19,9 +16,7 @@ public class BattlePanel extends JPanel {
     private int correctAnswersCount;
 
     public BattlePanel(CardLayout cardLayout, JPanel mainPanel, Player player, BattleEngine engine, VillagePanel villagePanel) {
-        this.cardLayout = cardLayout;
-        this.mainPanel = mainPanel;
-        this.player = player;
+        super(cardLayout, mainPanel, player);
         this.battleEngine = engine;
         this.progressManager = new ProgressManager();
         this.villagePanel = villagePanel;
@@ -91,7 +86,11 @@ public class BattlePanel extends JPanel {
     private void finishBattle() {
         String message = battleEngine.getMotivationalMessage(correctAnswersCount, currentQuestions.size());
         JOptionPane.showMessageDialog(this, "Battle Result: " + correctAnswersCount + "/" + currentQuestions.size() + "\n" + message);
-        progressManager.saveProgress(player);
+        try {
+            progressManager.saveProgress(player);
+        } catch (GameDataException ex) {
+            JOptionPane.showMessageDialog(this, "Error saving game: " + ex.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+        }
         villagePanel.updateDisplay();
         cardLayout.show(mainPanel, "Village");
     }

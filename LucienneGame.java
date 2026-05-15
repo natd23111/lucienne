@@ -14,7 +14,11 @@ public class LucienneGame extends JFrame {
         // Load saved progress
         progressManager = new ProgressManager();
         player = new Player("Jeff"); // Default player name
-        progressManager.loadProgress(player);
+        try {
+            progressManager.loadProgress(player);
+        } catch (GameDataException e) {
+            JOptionPane.showMessageDialog(this, "Error loading game progress: " + e.getMessage() + "\nStarting a new game.", "Load Error", JOptionPane.WARNING_MESSAGE);
+        }
 
         setTitle("Lucienne: Quest for Quality Education");
         setSize(360, 640); // Smartphone resolution [cite: 67]
@@ -26,8 +30,22 @@ public class LucienneGame extends JFrame {
 
         BattleEngine engine = new BattleEngine();
         Inventory inventory = new Inventory(player);
-        StoryParser storyParser = new StoryParser();
-        Map<String, Scene> scenes = storyParser.parseStory();
+
+        // Use ResourceParser interface
+        ResourceParser<Scene> storyParser = new StoryParser();
+        Map<String, Scene> scenes = new HashMap<>();
+        try {
+            scenes = storyParser.parse();
+        } catch (GameDataException e) {
+            JOptionPane.showMessageDialog(this, "Error loading story data: " + e.getMessage() + "\nGame may not function correctly.", "Data Error", JOptionPane.ERROR_MESSAGE);
+        }
+        
+        ResourceParser<List<Question>> questionParser = new QuestionParser();
+        try {
+            questionParser.parse(); // Parse questions at startup to catch errors early
+        } catch (GameDataException e) {
+            JOptionPane.showMessageDialog(this, "Error loading question data: " + e.getMessage() + "\nQuizzes may not function correctly.", "Data Error", JOptionPane.ERROR_MESSAGE);
+        }
 
         VillagePanel villagePanel = new VillagePanel(cardLayout, mainPanel, player);
         BattlePanel battlePanel = new BattlePanel(cardLayout, mainPanel, player, engine, villagePanel);

@@ -6,10 +6,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class StoryParser {
+public class StoryParser implements ResourceParser<Scene> {
     private static final String FILE_PATH = "story.txt";
 
-    public Map<String, Scene> parseStory() {
+    @Override
+    public Map<String, Scene> parse() throws GameDataException {
         Map<String, Scene> scenes = new HashMap<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
             String line;
@@ -47,7 +48,9 @@ public class StoryParser {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error reading story file: " + e.getMessage());
+            throw new GameDataException("Error reading story file: " + FILE_PATH, e);
+        } catch (Exception e) { // Catch any other unexpected parsing errors
+            throw new GameDataException("Error parsing story file: " + FILE_PATH, e);
         }
         return scenes;
     }

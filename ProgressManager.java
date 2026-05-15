@@ -7,17 +7,17 @@ public class ProgressManager {
     private static final String FILE_PATH = "savegame.txt";
 
     // Method to save score - MUST use try-catch for marks
-    public void saveProgress(Player player) {
+    public void saveProgress(Player player) throws GameDataException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH))) {
             writer.write(player.getName() + ":" + player.getScore() + ":" + player.getCurrentStoryScene());
             System.out.println("Progress saved successfully!");
         } catch (IOException e) {
-            System.err.println("Error saving progress: " + e.getMessage());
+            throw new GameDataException("Error saving progress to file: " + FILE_PATH, e);
         }
     }
 
     // Method to load score
-    public void loadProgress(Player player) {
+    public void loadProgress(Player player) throws GameDataException {
         try (Scanner scanner = new Scanner(new File(FILE_PATH))) {
             if (scanner.hasNextLine()) {
                 String[] parts = scanner.nextLine().split(":");
@@ -29,9 +29,9 @@ public class ProgressManager {
                 }
             }
         } catch (FileNotFoundException e) {
-            System.out.println("No save file found. Starting fresh.");
+            throw new GameDataException("No save file found: " + FILE_PATH, e);
         } catch (Exception e) {
-            System.out.println("Progress file corrupted.");
+            throw new GameDataException("Progress file corrupted: " + FILE_PATH, e);
         }
     }
 }

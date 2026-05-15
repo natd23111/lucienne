@@ -4,19 +4,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Map;
 
-public class StoryPanel extends JPanel {
-    private CardLayout cardLayout;
-    private JPanel mainPanel;
-    private Player player;
+public class StoryPanel extends BaseGamePanel {
     private Map<String, Scene> storyScenes;
     private JTextArea narrativeArea;
     private JPanel choicePanel;
     private ProgressManager progressManager;
 
     public StoryPanel(CardLayout cardLayout, JPanel mainPanel, Player player, Map<String, Scene> scenes) {
-        this.cardLayout = cardLayout;
-        this.mainPanel = mainPanel;
-        this.player = player;
+        super(cardLayout, mainPanel, player);
         this.storyScenes = scenes;
         this.progressManager = new ProgressManager();
 
@@ -56,7 +51,11 @@ public class StoryPanel extends JPanel {
             JButton endBtn = new JButton("Begin Your Adventure");
             endBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
             endBtn.addActionListener(e -> {
-                progressManager.saveProgress(player);
+                try {
+                    progressManager.saveProgress(player);
+                } catch (GameDataException ex) {
+                    JOptionPane.showMessageDialog(this, "Error saving game: " + ex.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+                }
                 cardLayout.show(mainPanel, "Village");
             });
             choicePanel.add(endBtn);

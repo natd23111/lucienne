@@ -2,21 +2,22 @@ package Project;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
-public class ShopPanel extends JPanel {
-    private CardLayout cardLayout;
-    private JPanel mainPanel;
-    private Player player;
+public class ShopPanel extends BaseGamePanel {
     private Inventory inventory;
     private ProgressManager progressManager;
     private VillagePanel villagePanel;
     private JPanel shopContainer;
     private JLabel kpLabel;
+    private List<ShopItem> shopItems; // To hold items for sorting
+    private boolean sortByName = true; // Default sort order
 
     public ShopPanel(CardLayout cardLayout, JPanel mainPanel, Player player, Inventory inventory, VillagePanel villagePanel) {
-        this.cardLayout = cardLayout;
-        this.mainPanel = mainPanel;
-        this.player = player;
+        super(cardLayout, mainPanel, player);
         this.inventory = inventory;
         this.progressManager = new ProgressManager();
         this.villagePanel = villagePanel;
@@ -31,9 +32,12 @@ public class ShopPanel extends JPanel {
         shopContainer = new JPanel();
         shopContainer.setLayout(new BoxLayout(shopContainer, BoxLayout.Y_AXIS));
         
-        setupShopItem("Memory Charm", 50);
-        setupShopItem("Knowledge Potion", 30);
-        setupShopItem("Sage's Scroll", 100);
+        shopItems = new ArrayList<>();
+        shopItems.add(new ShopItem("Memory Charm", 50));
+        shopItems.add(new ShopItem("Knowledge Potion", 30));
+        shopItems.add(new ShopItem("Sage's Scroll", 100));
+
+        displayShopItems(); // Initial display
 
         add(new JScrollPane(shopContainer), BorderLayout.CENTER);
 
@@ -47,19 +51,82 @@ public class ShopPanel extends JPanel {
         add(footer, BorderLayout.SOUTH);
     }
 
-    private void setupShopItem(String itemName, int price) {
-        JButton buyButton = new JButton(itemName + " - " + price + " KP");
+    // Inner class to represent a shop item
+    private static class ShopItem {
+        String name;
+        int price;
+
+        public ShopItem(String name, int price) {
+            this.name = name;
+            this.price = price;
+        }
+
+        public String getName() { return name; }
+        public int getPrice() { return price; }
+    }
+
+    private void displayShopItems() {
+        shopContainer.removeAll();
+
+        // Add sorting controls
+        JPanel sortPanel = new JPanel();
+        JButton sortByNameBtn = new JButton("Sort by Name");
+        sortByNameBtn.addActionListener(e -> {
+            sortByName = true;
+            sortAndRedisplayItems();
+        });
+        JButton sortByPriceBtn = new JButton("Sort by Price");
+        sortByPriceBtn.addActionListener(e -> {
+            sortByName = false;
+            sortAndRedisplayItems();
+        });
+        sortPanel.add(sortByNameBtn);
+        sortPanel.add(sortByPriceBtn);
+        shopContainer.add(sortPanel);
+        shopContainer.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        // Sort items before displaying
+        sortAndRedisplayItems();
+    }
+
+    private void sortAndRedisplayItems() {
+        // Remove only item buttons, keep sort panel
+        for (Component comp : shopContainer.getComponents()) {
+            if (comp instanceof JButton || comp instanceof Box.Filler) { // Assuming Box.Filler is for rigid areas
+                shopContainer.remove(comp);
+            }
+        }
+
+        if (sortByName) {
+            Collections.sort(shopItems, Comparator.comparing(ShopItem::getName));
+        } else {
+            Collections.sort(shopItems, Comparator.comparingInt(ShopItem::getPrice));
+        }
+
+        for (ShopItem item : shopItems) {
+            addShopItemButton(item.getName(), item.getPrice());
+        }
+        shopContainer.revalidate();
+        shopContainer.repaint();
+    }
+
+    private void addShopItemButton(String itemName, int price) {
+        JButton buyButton = new JButton(itemName + " - " + price + " KP"); // Use a final variable for lambda
         buyButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         buyButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         
         buyButton.addActionListener(e -> {
             if (player.getScore() >= price) {
-                player.setScore(player.getScore() - price); // Deduct once here
+                player.setScore(player.getScore() - price);
                 inventory.buyItem(itemName, price);
                 kpLabel.setText("Current KP: " + player.getScore());
                 villagePanel.updateDisplay();
                 JOptionPane.showMessageDialog(this, "Purchased " + itemName + "!");
-                progressManager.saveProgress(player);
+                try {
+                    progressManager.saveProgress(player);
+                } catch (GameDataException ex) {
+                    JOptionPane.showMessageDialog(this, "Error saving game: " + ex.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+                }
             } else {
                 JOptionPane.showMessageDialog(this, "Not enough Knowledge Points!");
             }

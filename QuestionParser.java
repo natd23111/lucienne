@@ -8,10 +8,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class QuestionParser {
+public class QuestionParser implements ResourceParser<List<Question>> {
     private static final String FILE_PATH = "questions.txt";
 
-    public Map<String, List<Question>> parseQuestions() {
+    @Override
+    public Map<String, List<Question>> parse() throws GameDataException {
         Map<String, List<Question>> categorizedQuestions = new HashMap<>();
         String currentCategory = "Default"; // A default category if none is specified initially
 
@@ -70,11 +71,12 @@ public class QuestionParser {
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error reading questions file: " + e.getMessage());
+            throw new GameDataException("Error reading questions file: " + FILE_PATH, e);
+        } catch (Exception e) { // Catch any other unexpected parsing errors
+            throw new GameDataException("Error parsing questions file: " + FILE_PATH, e);
         }
         return categorizedQuestions;
     }
-
     // Example main method for testing
     public static void main(String[] args) {
         QuestionParser parser = new QuestionParser();
