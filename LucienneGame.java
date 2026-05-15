@@ -53,9 +53,10 @@ public class LucienneGame extends JFrame {
         BattlePanel battlePanel = new BattlePanel(cardLayout, mainPanel, player, engine, villagePanel);
         ShopPanel shopPanel = new ShopPanel(cardLayout, mainPanel, player, inventory, villagePanel);
         StoryPanel storyPanel = new StoryPanel(cardLayout, mainPanel, player, scenes, villagePanel);
+        WelcomePanel welcomePanel = new WelcomePanel(cardLayout, mainPanel, player, villagePanel, storyPanel);
 
         // Add Screens here
-        mainPanel.add(createWelcomeScreen(), "Welcome");
+        mainPanel.add(welcomePanel, "Welcome");
         mainPanel.add(villagePanel, "Village");
 
         // Registering game screens
@@ -66,19 +67,6 @@ public class LucienneGame extends JFrame {
         
         add(mainPanel);
         setVisible(true);
-    }
-
-    private JPanel createWelcomeScreen() {
-        JPanel panel = new JPanel(new BorderLayout());
-        JLabel label = new JLabel("Welcome to Lucienne", SwingConstants.CENTER);
-        JButton startBtn = new JButton("Start Journey");
-        
-        // This is how you switch screens
-        startBtn.addActionListener(e -> cardLayout.show(mainPanel, "Story"));
-        
-        panel.add(label, BorderLayout.CENTER);
-        panel.add(startBtn, BorderLayout.SOUTH);
-        return panel;
     }
 
     public static void main(String[] args) {
