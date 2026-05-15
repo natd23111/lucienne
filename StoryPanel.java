@@ -9,10 +9,13 @@ public class StoryPanel extends BaseGamePanel {
     private JTextArea narrativeArea;
     private JPanel choicePanel;
     private ProgressManager progressManager;
+    private VillagePanel villagePanel;
 
-    public StoryPanel(CardLayout cardLayout, JPanel mainPanel, Player player, Map<String, Scene> scenes) {
+    public StoryPanel(CardLayout cardLayout, JPanel mainPanel, Player player,
+            Map<String, Scene> scenes, VillagePanel villagePanel) {
         super(cardLayout, mainPanel, player);
         this.storyScenes = scenes;
+        this.villagePanel = villagePanel;
         this.progressManager = new ProgressManager();
 
         setLayout(new BorderLayout(15, 15));
@@ -40,6 +43,7 @@ public class StoryPanel extends BaseGamePanel {
         Scene scene = storyScenes.get(sceneId);
         if (scene == null) {
             cardLayout.show(mainPanel, "Village");
+            villagePanel.requestFocusInWindow();
             return;
         }
 
@@ -57,6 +61,7 @@ public class StoryPanel extends BaseGamePanel {
                     JOptionPane.showMessageDialog(this, "Error saving game: " + ex.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
                 }
                 cardLayout.show(mainPanel, "Village");
+                villagePanel.requestFocusInWindow();
             });
             choicePanel.add(endBtn);
         } else {

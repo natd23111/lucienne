@@ -33,7 +33,10 @@ public class BattlePanel extends BaseGamePanel {
         add(optionsPanel, BorderLayout.CENTER);
 
         JButton fleeBtn = new JButton("Flee to Village");
-        fleeBtn.addActionListener(e -> cardLayout.show(mainPanel, "Village"));
+        fleeBtn.addActionListener(e -> {
+            cardLayout.show(mainPanel, "Village");
+            villagePanel.requestFocusInWindow();
+        });
         add(fleeBtn, BorderLayout.SOUTH);
     }
 
@@ -93,5 +96,6 @@ public class BattlePanel extends BaseGamePanel {
         }
         villagePanel.updateDisplay();
         cardLayout.show(mainPanel, "Village");
+        villagePanel.requestFocusInWindow();
     }
 }

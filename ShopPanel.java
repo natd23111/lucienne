@@ -44,7 +44,10 @@ public class ShopPanel extends BaseGamePanel {
         JPanel footer = new JPanel(new GridLayout(2, 1, 5, 5));
         kpLabel = new JLabel("Current KP: " + player.getScore(), SwingConstants.CENTER);
         JButton backBtn = new JButton("Back to Village");
-        backBtn.addActionListener(e -> cardLayout.show(mainPanel, "Village"));
+        backBtn.addActionListener(e -> {
+            cardLayout.show(mainPanel, "Village");
+            villagePanel.requestFocusInWindow();
+        });
         
         footer.add(kpLabel);
         footer.add(backBtn);

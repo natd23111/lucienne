@@ -8,11 +8,14 @@ import java.util.Map;
 
 public class LearningPanel extends BaseGamePanel {
     private BattlePanel battlePanel;
+    private VillagePanel villagePanel;
     private QuestionParser parser;
 
-    public LearningPanel(CardLayout cardLayout, JPanel mainPanel, Player player, BattlePanel battlePanel) {
+    public LearningPanel(CardLayout cardLayout, JPanel mainPanel, Player player,
+            BattlePanel battlePanel, VillagePanel villagePanel) {
         super(cardLayout, mainPanel, player);
         this.battlePanel = battlePanel;
+        this.villagePanel = villagePanel;
         this.parser = new QuestionParser();
 
         setLayout(new BorderLayout());
@@ -57,7 +60,10 @@ public class LearningPanel extends BaseGamePanel {
         add(scrollPane, BorderLayout.CENTER);
 
         JButton backBtn = new JButton("Back to Village");
-        backBtn.addActionListener(e -> cardLayout.show(mainPanel, "Village"));
+        backBtn.addActionListener(e -> {
+            cardLayout.show(mainPanel, "Village");
+            villagePanel.requestFocusInWindow();
+        });
         add(backBtn, BorderLayout.SOUTH);
     }
 }
