@@ -11,16 +11,19 @@ public class ShopPanel extends BaseGamePanel {
     private Inventory inventory;
     private ProgressManager progressManager;
     private VillagePanel villagePanel;
+    private SoundManager soundManager;
     private JPanel shopContainer;
     private JLabel kpLabel;
-    private List<ShopItem> shopItems; // To hold items for sorting
-    private boolean sortByName = true; // Default sort order
+    private List<ShopItem> shopItems;
+    private boolean sortByName = true;
 
-    public ShopPanel(CardLayout cardLayout, JPanel mainPanel, Player player, Inventory inventory, VillagePanel villagePanel) {
+    public ShopPanel(CardLayout cardLayout, JPanel mainPanel, Player player, Inventory inventory,
+            VillagePanel villagePanel, SoundManager soundManager) {
         super(cardLayout, mainPanel, player);
         this.inventory = inventory;
         this.progressManager = new ProgressManager();
         this.villagePanel = villagePanel;
+        this.soundManager = soundManager;
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
@@ -31,13 +34,16 @@ public class ShopPanel extends BaseGamePanel {
 
         shopContainer = new JPanel();
         shopContainer.setLayout(new BoxLayout(shopContainer, BoxLayout.Y_AXIS));
-        
-        shopItems = new ArrayList<>();
-        shopItems.add(new ShopItem("Memory Charm", 50));
-        shopItems.add(new ShopItem("Knowledge Potion", 30));
-        shopItems.add(new ShopItem("Sage's Scroll", 100));
 
-        displayShopItems(); // Initial display
+        shopItems = new ArrayList<>();
+        shopItems.add(new ShopItem("Memory Charm", 50,
+                "Eliminates 2 wrong answers in battle"));
+        shopItems.add(new ShopItem("Knowledge Potion", 30,
+                "Auto-corrects one quiz question"));
+        shopItems.add(new ShopItem("Sage's Scroll", 100,
+                "+2 bonus KP per correct answer (permanent)"));
+
+        displayShopItems();
 
         add(new JScrollPane(shopContainer), BorderLayout.CENTER);
 
@@ -48,30 +54,38 @@ public class ShopPanel extends BaseGamePanel {
             cardLayout.show(mainPanel, "Village");
             villagePanel.requestFocusInWindow();
         });
-        
+
         footer.add(kpLabel);
         footer.add(backBtn);
         add(footer, BorderLayout.SOUTH);
     }
 
-    // Inner class to represent a shop item
     private static class ShopItem {
         String name;
         int price;
+        String description;
 
-        public ShopItem(String name, int price) {
+        ShopItem(String name, int price, String description) {
             this.name = name;
             this.price = price;
+            this.description = description;
         }
 
-        public String getName() { return name; }
-        public int getPrice() { return price; }
+        String getName() { return name; }
+        int getPrice() { return price; }
+        String getDescription() { return description; }
     }
 
     private void displayShopItems() {
-        shopContainer.removeAll();
+        sortAndRedisplayItems();
+    }
 
-        // Add sorting controls
+    private void sortAndRedisplayItems() {
+        Component[] components = shopContainer.getComponents();
+        for (Component comp : components) {
+            shopContainer.remove(comp);
+        }
+
         JPanel sortPanel = new JPanel();
         JButton sortByNameBtn = new JButton("Sort by Name");
         sortByNameBtn.addActionListener(e -> {
@@ -88,18 +102,6 @@ public class ShopPanel extends BaseGamePanel {
         shopContainer.add(sortPanel);
         shopContainer.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        // Sort items before displaying
-        sortAndRedisplayItems();
-    }
-
-    private void sortAndRedisplayItems() {
-        // Remove only item buttons, keep sort panel
-        for (Component comp : shopContainer.getComponents()) {
-            if (comp instanceof JButton || comp instanceof Box.Filler) { // Assuming Box.Filler is for rigid areas
-                shopContainer.remove(comp);
-            }
-        }
-
         if (sortByName) {
             Collections.sort(shopItems, Comparator.comparing(ShopItem::getName));
         } else {
@@ -107,35 +109,68 @@ public class ShopPanel extends BaseGamePanel {
         }
 
         for (ShopItem item : shopItems) {
-            addShopItemButton(item.getName(), item.getPrice());
+            addShopItemCard(item);
         }
         shopContainer.revalidate();
         shopContainer.repaint();
     }
 
-    private void addShopItemButton(String itemName, int price) {
-        JButton buyButton = new JButton(itemName + " - " + price + " KP"); // Use a final variable for lambda
+    private void addShopItemCard(ShopItem item) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(BorderFactory.createLineBorder(new Color(80, 80, 120), 1));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+
+        JLabel nameLabel = new JLabel(item.getName());
+        nameLabel.setFont(new Font("Serif", Font.BOLD, 14));
+        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel descLabel = new JLabel("<html><div style='text-align:center;color:#aaa;'>"
+                + item.getDescription() + "</div></html>");
+        descLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        descLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        String ownedText = "";
+        if (item.getName().equals("Sage's Scroll") && player.hasSagesScroll()) {
+            ownedText = " [OWNED]";
+        } else if (player.getItemCount(item.getName()) > 0) {
+            ownedText = " (x" + player.getItemCount(item.getName()) + " owned)";
+        }
+
+        JButton buyButton = new JButton(item.getPrice() + " KP" + ownedText);
         buyButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        buyButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-        
+        buyButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
         buyButton.addActionListener(e -> {
-            if (player.getScore() >= price) {
-                player.setScore(player.getScore() - price);
-                inventory.buyItem(itemName, price);
+            if (item.getName().equals("Sage's Scroll") && player.hasSagesScroll()) {
+                JOptionPane.showMessageDialog(this, "You already own the Sage's Scroll!");
+                return;
+            }
+            if (player.getScore() >= item.getPrice()) {
+                player.setScore(player.getScore() - item.getPrice());
+                inventory.buyItem(item.getName(), item.getPrice());
                 kpLabel.setText("Current KP: " + player.getScore());
                 villagePanel.updateDisplay();
-                JOptionPane.showMessageDialog(this, "Purchased " + itemName + "!");
+                soundManager.playPurchase();
+                JOptionPane.showMessageDialog(this, "Purchased " + item.getName() + "!");
                 try {
                     progressManager.saveProgress(player);
                 } catch (GameDataException ex) {
-                    JOptionPane.showMessageDialog(this, "Error saving game: " + ex.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Error saving game: " + ex.getMessage(),
+                            "Save Error", JOptionPane.ERROR_MESSAGE);
                 }
+                sortAndRedisplayItems();
             } else {
                 JOptionPane.showMessageDialog(this, "Not enough Knowledge Points!");
             }
         });
-        
+
+        card.add(nameLabel);
+        card.add(descLabel);
+        card.add(Box.createRigidArea(new Dimension(0, 5)));
+        card.add(buyButton);
+
         shopContainer.add(Box.createRigidArea(new Dimension(0, 10)));
-        shopContainer.add(buyButton);
+        shopContainer.add(card);
     }
 }

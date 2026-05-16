@@ -3,7 +3,6 @@ package Project;
 import java.util.HashMap;
 
 public class Inventory implements Interactable {
-    private HashMap<String, Integer> items = new HashMap<>();
     private Player player;
 
     public Inventory(Player player) {
@@ -13,22 +12,32 @@ public class Inventory implements Interactable {
     @Override
     public void buyItem(String itemName, int cost) {
         if (player.getScore() >= cost) {
-            // Currency is handled by the Player/Shop logic, 
-            // we just add the item to the map here.
-            items.put(itemName, items.getOrDefault(itemName, 0) + 1);
+            if (itemName.equals("Sage's Scroll") && player.hasSagesScroll()) {
+                System.out.println("Already own Sage's Scroll");
+                return;
+            }
+            if (itemName.equals("Sage's Scroll")) {
+                player.setSagesScroll(true);
+            } else {
+                player.addItem(itemName);
+            }
             System.out.println("Bought: " + itemName);
         }
     }
 
     @Override
     public void useItem(String itemName) {
-        if (items.getOrDefault(itemName, 0) > 0) {
-            items.put(itemName, items.get(itemName) - 1);
-            System.out.println("Used: " + itemName);
-        }
+        player.useItem(itemName);
+        System.out.println("Used: " + itemName);
     }
 
-    public int getKnowledgePoints() {
-        return player.getScore();
-    }
+    public boolean useKnowledgePotion() { return player.useItem("Knowledge Potion"); }
+    public boolean useMemoryCharm() { return player.useItem("Memory Charm"); }
+    public int getKnowledgePotionCount() { return player.getItemCount("Knowledge Potion"); }
+    public int getMemoryCharmCount() { return player.getItemCount("Memory Charm"); }
+    public boolean hasSagesScroll() { return player.hasSagesScroll(); }
+
+    public HashMap<String, Integer> getAllItems() { return new HashMap<>(player.getInventory()); }
+
+    public int getKnowledgePoints() { return player.getScore(); }
 }

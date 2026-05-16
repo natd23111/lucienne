@@ -27,12 +27,15 @@ public class VillagePanel extends BaseGamePanel {
 
     private List<FloatingFragment> fragments = new ArrayList<>();
     private List<InteractionZone> zones = new ArrayList<>();
+    private List<CollectParticle> particles = new ArrayList<>();
     private Random random = new Random();
 
     private String promptText = null;
+    private SoundManager soundManager;
 
-    public VillagePanel(CardLayout cardLayout, JPanel mainPanel, Player player) {
+    public VillagePanel(CardLayout cardLayout, JPanel mainPanel, Player player, SoundManager soundManager) {
         super(cardLayout, mainPanel, player);
+        this.soundManager = soundManager;
 
         setLayout(null);
         setOpaque(false);
@@ -160,12 +163,26 @@ public class VillagePanel extends BaseGamePanel {
             double fdy = (heroY + heroH / 2.0) - f.y;
             if (Math.sqrt(fdx * fdx + fdy * fdy) < 40) {
                 player.addScore(5);
+                soundManager.playCollect();
+                spawnParticles(f.x, f.y);
                 it.remove();
             }
+        }
+
+        for (Iterator<CollectParticle> pi = particles.iterator(); pi.hasNext();) {
+            CollectParticle p = pi.next();
+            p.update();
+            if (p.life <= 0) pi.remove();
         }
     }
 
     public void updateDisplay() {
+    }
+
+    private void spawnParticles(double x, double y) {
+        for (int i = 0; i < 8; i++) {
+            particles.add(new CollectParticle(x, y));
+        }
     }
 
     @Override
@@ -174,6 +191,10 @@ public class VillagePanel extends BaseGamePanel {
 
         for (FloatingFragment f : fragments) {
             f.draw(g);
+        }
+
+        for (CollectParticle p : particles) {
+            p.draw(g);
         }
 
         drawHero(g);
@@ -301,6 +322,38 @@ public class VillagePanel extends BaseGamePanel {
             g.fillOval((int) x - 10, (int) y - 10, 20, 20);
             g.setColor(gold);
             g.fillOval((int) x - 6, (int) y - 6, 12, 12);
+        }
+    }
+
+    private class CollectParticle {
+        double x, y;
+        double vx, vy;
+        int life;
+        int maxLife;
+
+        CollectParticle(double x, double y) {
+            this.x = x;
+            this.y = y;
+            double angle = random.nextDouble() * Math.PI * 2;
+            double speed = 1.5 + random.nextDouble() * 3;
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed - 2;
+            this.life = 20 + random.nextInt(20);
+            this.maxLife = this.life;
+        }
+
+        void update() {
+            x += vx;
+            y += vy;
+            vy += 0.1;
+            life--;
+        }
+
+        void draw(Graphics g) {
+            float alpha = (float) life / maxLife;
+            g.setColor(new Color(255, 215, 0, (int) (200 * alpha)));
+            int size = (int) (4 * alpha + 2);
+            g.fillOval((int) x, (int) y, size, size);
         }
     }
 }
