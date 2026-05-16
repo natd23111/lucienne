@@ -1,7 +1,9 @@
 package Project;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -15,6 +17,7 @@ public class Player {
     private int xp;
     private int level;
     private Set<String> masteredCategories;
+    private List<String> collectedScrolls;
 
     public Player(String name) {
         this.name = name;
@@ -26,6 +29,7 @@ public class Player {
         this.xp = 0;
         this.level = 1;
         this.masteredCategories = new HashSet<>();
+        this.collectedScrolls = new ArrayList<>();
     }
 
     public String getName() { return name; }
@@ -79,4 +83,8 @@ public class Player {
     public void masterCategory(String category) { masteredCategories.add(category); }
     public Set<String> getMasteredCategories() { return masteredCategories; }
     public void setMasteredCategories(Set<String> cats) { this.masteredCategories = (cats != null) ? new HashSet<>(cats) : new HashSet<>(); }
+
+    public List<String> getCollectedScrolls() { return collectedScrolls; }
+    public void addCollectedScroll(String fact) { collectedScrolls.add(fact); }
+    public void setCollectedScrolls(List<String> scrolls) { this.collectedScrolls = (scrolls != null) ? new ArrayList<>(scrolls) : new ArrayList<>(); }
 }

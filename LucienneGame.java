@@ -59,6 +59,7 @@ public class LucienneGame extends JFrame {
         ShopPanel shopPanel = new ShopPanel(cardLayout, mainPanel, player, inventory,
                 villagePanel, soundManager);
         StoryPanel storyPanel = new StoryPanel(cardLayout, mainPanel, player, scenes, villagePanel);
+        CodexPanel codexPanel = new CodexPanel(cardLayout, mainPanel, player, villagePanel);
         WelcomePanel welcomePanel = new WelcomePanel(cardLayout, mainPanel, player,
                 villagePanel, storyPanel);
 
@@ -69,6 +70,7 @@ public class LucienneGame extends JFrame {
         mainPanel.add(battleGroundPanel, "BattleGround");
         mainPanel.add(battlePanel, "BattleQuiz");
         mainPanel.add(shopPanel, "VillageShop");
+        mainPanel.add(codexPanel, "Codex");
         mainPanel.add(storyPanel, "Story");
 
         add(mainPanel);

@@ -1,0 +1,36 @@
+NAME:Piercehardt
+X:80
+Y:320
+SPRITE:npc_piercehardt.png
+DIALOGUE:Welcome to Lucienne, young Jeff. I am Piercehardt Luminous, the Guardian of Wisdom.
+DIALOGUE:This kingdom was once filled with knowledge and wisdom, but Miss Shona created the Knowledge Crystal and trapped it all.
+DIALOGUE:Explore the village. Collect the Knowledge Scrolls scattered around. They hold the truths of SDG 4.
+DIALOGUE:When you are ready, enter the Battleground and defeat the Evil Memory Fragments with your knowledge.
+END
+
+NAME:Scholar Elara
+X:280
+Y:180
+SPRITE:npc_villager_01.png
+DIALOGUE:SDG 4 stands for Sustainable Development Goal 4: Quality Education.
+DIALOGUE:It aims to ensure inclusive and equitable quality education and promote lifelong learning for all by the year 2030.
+DIALOGUE:Literacy and numeracy are the very foundations for all future learning. Without them, children cannot progress.
+END
+
+NAME:Elder Tomas
+X:100
+Y:470
+SPRITE:npc_villager_02.png
+DIALOGUE:Did you know? Over 244 million children and youth are still out of school worldwide.
+DIALOGUE:Gender equality in education is a key target - girls and boys must have equal access to learning.
+DIALOGUE:Inclusive education means students with disabilities, refugees, and those in vulnerable situations all have a right to learn.
+END
+
+NAME:Shopkeeper Mira
+X:220
+Y:440
+SPRITE:npc_shopkeeper.png
+DIALOGUE:Welcome to the Village Shop! I sell items that can help you in your quiz battles.
+DIALOGUE:Knowledge Potions can auto-correct a question for you. Memory Charms eliminate wrong answers.
+DIALOGUE:The Sage's Scroll is a permanent blessing - it gives you bonus Knowledge Points on every correct answer!
+END

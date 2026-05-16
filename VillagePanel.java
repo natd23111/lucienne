@@ -4,7 +4,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -34,6 +38,9 @@ public class VillagePanel extends BaseGamePanel {
     private String promptText = null;
     private SoundManager soundManager;
 
+    private List<NPC> npcs = new ArrayList<>();
+    private List<String> scrollFacts = new ArrayList<>();
+
     public VillagePanel(CardLayout cardLayout, JPanel mainPanel, Player player, SoundManager soundManager) {
         super(cardLayout, mainPanel, player);
         this.soundManager = soundManager;
@@ -42,14 +49,18 @@ public class VillagePanel extends BaseGamePanel {
         setOpaque(false);
 
         setBackgroundImage("assets/village_bg.png");
-        heroSprite = new ImageIcon("assets/jeff_sprite.png").getImage();
-        spriteSheet = new ImageIcon("assets/jeff_spritesheet.png").getImage();
+        heroSprite = new ImageIcon("assets/jeff_wizard.png").getImage();
+        spriteSheet = new ImageIcon("assets/jeff_wizard_spritesheet.png").getImage();
         scrollIcon = new ImageIcon("assets/icon_scroll.png").getImage();
 
         zones.add(new InteractionZone(30, 100, 140, 100, "KnowledgeGarden", "Explore Knowledge Garden"));
         zones.add(new InteractionZone(190, 100, 140, 100, "BattleGround", "Enter Battle Ground"));
         zones.add(new InteractionZone(30, 400, 140, 100, "VillageShop", "Visit Village Shop"));
         zones.add(new InteractionZone(190, 400, 140, 100, null, "Save Game"));
+        zones.add(new InteractionZone(300, 540, 50, 50, "Codex", "Open Codex"));
+
+        loadNPCs();
+        loadScrollFacts();
 
         gameLoop = new Timer(16, e -> {
             updateGame();
@@ -133,8 +144,19 @@ public class VillagePanel extends BaseGamePanel {
             }
         }
 
+        if (promptText == null) {
+            for (NPC npc : npcs) {
+                Rectangle npcRect = new Rectangle(npc.getX(), npc.getY(), 48, 64);
+                if (heroRect.intersects(npcRect)) {
+                    promptText = "Press E to talk to " + npc.getName();
+                    break;
+                }
+            }
+        }
+
         if (ePressed) {
             ePressed = false;
+            boolean handled = false;
             for (InteractionZone zone : zones) {
                 if (heroRect.intersects(zone.bounds)) {
                     if (zone.targetScreen != null) {
@@ -151,7 +173,19 @@ public class VillagePanel extends BaseGamePanel {
                         JOptionPane.showMessageDialog(this,
                                 "Progress Saved to savegame.txt!");
                     }
+                    handled = true;
                     break;
+                }
+            }
+
+            if (!handled) {
+                for (NPC npc : npcs) {
+                    Rectangle npcRect = new Rectangle(npc.getX(), npc.getY(), 48, 64);
+                    if (heroRect.intersects(npcRect)) {
+                        showNPCDialogue(npc);
+                        handled = true;
+                        break;
+                    }
                 }
             }
         }
@@ -168,6 +202,13 @@ public class VillagePanel extends BaseGamePanel {
                 soundManager.playCollect();
                 spawnParticles(f.x, f.y);
                 it.remove();
+                String fact = getNextScrollFact();
+                if (fact != null) {
+                    player.addCollectedScroll(fact);
+                    JOptionPane.showMessageDialog(this,
+                            "Knowledge Scroll Collected!\n\n" + fact,
+                            "Scroll of Knowledge", JOptionPane.INFORMATION_MESSAGE);
+                }
             }
         }
 
@@ -200,6 +241,10 @@ public class VillagePanel extends BaseGamePanel {
         }
 
         drawHero(g);
+
+        for (NPC npc : npcs) {
+            drawNPC(g, npc);
+        }
 
         if (promptText != null) {
             drawPrompt(g);
@@ -286,6 +331,97 @@ public class VillagePanel extends BaseGamePanel {
     public void addNotify() {
         super.addNotify();
         requestFocusInWindow();
+    }
+
+    private void loadNPCs() {
+        try (BufferedReader reader = new BufferedReader(new FileReader("npcs.txt"))) {
+            String name = null;
+            int x = 0, y = 0;
+            String sprite = null;
+            List<String> dialogue = new ArrayList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+
+                if (line.startsWith("NAME:")) {
+                    name = line.substring(5).trim();
+                } else if (line.startsWith("X:")) {
+                    x = Integer.parseInt(line.substring(2).trim());
+                } else if (line.startsWith("Y:")) {
+                    y = Integer.parseInt(line.substring(2).trim());
+                } else if (line.startsWith("SPRITE:")) {
+                    sprite = "assets/" + line.substring(7).trim();
+                } else if (line.startsWith("DIALOGUE:")) {
+                    dialogue.add(line.substring(9).trim());
+                } else if (line.equals("END") && name != null && sprite != null) {
+                    NPC npc = new NPC(name, x, y, sprite);
+                    for (String d : dialogue) npc.addDialogue(d);
+                    npcs.add(npc);
+                    name = null; sprite = null;
+                    dialogue.clear();
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Could not load NPCs: " + e.getMessage());
+        }
+    }
+
+    private void loadScrollFacts() {
+        try (BufferedReader reader = new BufferedReader(new FileReader("scrolls.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    scrollFacts.add(line);
+                }
+            }
+            Collections.shuffle(scrollFacts);
+        } catch (IOException e) {
+            System.err.println("Could not load scroll facts: " + e.getMessage());
+        }
+    }
+
+    private String getNextScrollFact() {
+        if (scrollFacts.isEmpty()) {
+            scrollFacts.add("Knowledge is the most powerful weapon to change the world.");
+        }
+        int collected = player.getCollectedScrolls().size();
+        if (collected >= scrollFacts.size()) {
+            return scrollFacts.get(random.nextInt(scrollFacts.size()));
+        }
+        return scrollFacts.get(collected);
+    }
+
+    private void showNPCDialogue(NPC npc) {
+        if (npc.getDialogue().isEmpty()) return;
+        StringBuilder msg = new StringBuilder();
+        for (String line : npc.getDialogue()) {
+            if (msg.length() > 0) msg.append("\n\n");
+            msg.append(line);
+        }
+        JOptionPane.showMessageDialog(this, msg.toString(),
+                npc.getName(), JOptionPane.PLAIN_MESSAGE);
+    }
+
+    private void drawNPC(Graphics g, NPC npc) {
+        Image sprite = new ImageIcon(npc.getSpritePath()).getImage();
+        int npcW = 48;
+        int npcH = 64;
+        if (sprite.getWidth(null) > 0) {
+            g.drawImage(sprite, npc.getX(), npc.getY(), npcW, npcH, null);
+        } else {
+            g.setColor(new Color(150, 120, 80));
+            g.fillRect(npc.getX(), npc.getY(), npcW, npcH);
+        }
+
+        g.setFont(new Font("SansSerif", Font.PLAIN, 10));
+        g.setColor(new Color(0, 0, 0, 140));
+        FontMetrics fm = g.getFontMetrics();
+        int tw = fm.stringWidth(npc.getName());
+        g.fillRect(npc.getX() + npcW / 2 - tw / 2 - 3, npc.getY() - 14, tw + 6, 14);
+        g.setColor(new Color(255, 215, 0));
+        g.drawString(npc.getName(), npc.getX() + npcW / 2 - tw / 2, npc.getY() - 3);
     }
 
     private static class InteractionZone {

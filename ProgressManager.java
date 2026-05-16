@@ -1,7 +1,9 @@
 package Project;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -28,6 +30,13 @@ public class ProgressManager {
             }
             String masteredStr = masteredPart.length() > 0 ? masteredPart.toString() : "none";
 
+            StringBuilder scrollPart = new StringBuilder();
+            for (String s : player.getCollectedScrolls()) {
+                if (scrollPart.length() > 0) scrollPart.append("~");
+                scrollPart.append(s);
+            }
+            String scrollStr = scrollPart.length() > 0 ? scrollPart.toString() : "none";
+
             writer.write(player.getName() + ":" +
                     player.getScore() + ":" +
                     player.getCurrentStoryScene() + ":" +
@@ -35,7 +44,8 @@ public class ProgressManager {
                     player.hasSagesScroll() + ":" +
                     player.getXp() + ":" +
                     player.getLevel() + ":" +
-                    masteredStr);
+                    masteredStr + ":" +
+                    scrollStr);
             System.out.println("Progress saved successfully!");
         } catch (IOException e) {
             throw new GameDataException("Error saving progress to file: " + FILE_PATH, e);
@@ -80,6 +90,14 @@ public class ProgressManager {
                         if (!cat.trim().isEmpty()) mastered.add(cat.trim());
                     }
                     player.setMasteredCategories(mastered);
+                }
+                if (parts.length >= 9 && !parts[8].equals("none")) {
+                    List<String> scrolls = new ArrayList<>();
+                    String[] scrollParts = parts[8].split("~");
+                    for (String s : scrollParts) {
+                        if (!s.trim().isEmpty()) scrolls.add(s.trim());
+                    }
+                    player.setCollectedScrolls(scrolls);
                 }
             }
         } catch (FileNotFoundException e) {
