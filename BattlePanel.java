@@ -2,7 +2,8 @@ package Project;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -14,15 +15,12 @@ public class BattlePanel extends BaseGamePanel {
     private SoundManager soundManager;
     private Inventory inventory;
 
-    private JLabel questionLabel;
-    private JPanel optionsPanel;
-    private JPanel bottomPanel;
     private List<Question> currentQuestions;
     private int currentQuestionIndex;
     private int correctAnswersCount;
-    private boolean scoreMultiplier = true;
 
     private String enemyName;
+    private Image enemyImage;
     private int enemyX, enemyY;
     private double enemyPhase;
     private double enemyRotate;
@@ -30,10 +28,26 @@ public class BattlePanel extends BaseGamePanel {
     private Random random = new Random();
     private String returnScreen = "Village";
 
+    private boolean learningMode;
+    private String learningCategory;
+
     private Color flashColor = null;
     private Timer flashTimer;
 
     private List<Integer> hiddenOptionIndices = new ArrayList<>();
+
+    private JButton fleeBtn;
+    private JLabel questionLabel;
+    private JLabel progressLabel;
+    private java.util.List<JButton> optionBtns = new ArrayList<>();
+    private JPanel itemBar;
+    private JButton potionBtn;
+    private JButton charmBtn;
+
+    private static final Color GOLD = new Color(255, 215, 0);
+    private static final Color DARK_BG = new Color(8, 6, 28);
+    private static final Color CARD_BG = new Color(14, 12, 40, 210);
+    private static final Color GOLD_DIM = new Color(255, 215, 0, 60);
 
     public BattlePanel(CardLayout cardLayout, JPanel mainPanel, Player player, BattleEngine engine,
             VillagePanel villagePanel, SoundManager soundManager, Inventory inventory) {
@@ -44,30 +58,36 @@ public class BattlePanel extends BaseGamePanel {
         this.soundManager = soundManager;
         this.inventory = inventory;
 
-        setLayout(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        enemyImage = new ImageIcon("assets/enemy_fragment.png").getImage();
 
-        questionLabel = new JLabel("Prepare for Battle!", SwingConstants.CENTER);
-        questionLabel.setFont(new Font("Serif", Font.BOLD, 16));
-        add(questionLabel, BorderLayout.NORTH);
+        setLayout(null);
+        setOpaque(true);
+        setBackground(DARK_BG);
 
-        optionsPanel = new JPanel();
-        optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.Y_AXIS));
-        optionsPanel.setOpaque(false);
-        add(optionsPanel, BorderLayout.CENTER);
+        questionLabel = new JLabel();
+        questionLabel.setForeground(new Color(220, 220, 240));
+        questionLabel.setFont(new Font("Serif", Font.BOLD, 15));
+        questionLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        questionLabel.setVerticalAlignment(SwingConstants.CENTER);
+        add(questionLabel);
 
-        bottomPanel = new JPanel();
-        bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
-        JButton fleeBtn = new JButton("Flee to Village");
-        fleeBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        progressLabel = new JLabel("", SwingConstants.CENTER);
+        progressLabel.setForeground(new Color(160, 140, 200));
+        progressLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        add(progressLabel);
+
+        itemBar = new JPanel();
+        itemBar.setOpaque(false);
+        itemBar.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        add(itemBar);
+
+        fleeBtn = createStyledButton("Flee to Village");
         fleeBtn.addActionListener(e -> {
             animTimer.stop();
             cardLayout.show(mainPanel, "Village");
             villagePanel.requestFocusInWindow();
         });
-        bottomPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-        bottomPanel.add(fleeBtn);
-        add(bottomPanel, BorderLayout.SOUTH);
+        add(fleeBtn);
 
         animTimer = new Timer(30, e -> {
             enemyPhase += 0.05;
@@ -83,10 +103,9 @@ public class BattlePanel extends BaseGamePanel {
     }
 
     public void startBattle(List<Question> questions, String enemy) {
-        this.currentQuestions = questions;
-        this.currentQuestionIndex = 0;
-        this.correctAnswersCount = 0;
-        this.hiddenOptionIndices.clear();
+        this.learningMode = false;
+        this.learningCategory = null;
+        initBattle(questions);
 
         if (enemy != null) {
             this.enemyName = enemy;
@@ -96,83 +115,212 @@ public class BattlePanel extends BaseGamePanel {
             this.enemyName = enemies[random.nextInt(enemies.length)];
         }
 
-        enemyX = 300;
-        enemyY = 180;
+        enemyX = getWidth() / 4;
+        enemyY = 130;
         enemyPhase = 0;
         enemyRotate = 0;
         animTimer.start();
         showNextQuestion();
     }
 
-    private void showNextQuestion() {
-        optionsPanel.removeAll();
-        hiddenOptionIndices.clear();
-
-        if (currentQuestionIndex < currentQuestions.size()) {
-            Question q = currentQuestions.get(currentQuestionIndex);
-            questionLabel.setText("<html><div style='text-align: center;'>"
-                    + q.getQuestionText() + "</div></html>");
-
-            List<String> options = q.getOptions();
-            if (options.isEmpty()) {
-                options = java.util.Arrays.asList("True", "False");
-            }
-
-            addItemButton();
-
-            for (int i = 0; i < options.size(); i++) {
-                final String option = options.get(i);
-                final int idx = i;
-                JButton btn = new JButton(option);
-                btn.setAlignmentX(Component.CENTER_ALIGNMENT);
-                btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-                btn.addActionListener(e -> handleAnswer(q, option, idx));
-                btn.setName("opt-" + i);
-                optionsPanel.add(Box.createRigidArea(new Dimension(0, 8)));
-                optionsPanel.add(btn);
-            }
-
-            if (!inventory.hasSagesScroll()) {
-                scoreMultiplier = false;
-            }
-            if (player.hasSagesScroll()) {
-                scoreMultiplier = true;
-            }
-        } else {
-            finishBattle();
-        }
-        optionsPanel.revalidate();
-        optionsPanel.repaint();
+    public void startLearningBattle(List<Question> questions, String category) {
+        this.learningMode = true;
+        this.learningCategory = category;
+        initBattle(questions);
+        this.enemyName = null;
+        animTimer.stop();
+        showNextQuestion();
     }
 
-    private void addItemButton() {
+    private void initBattle(List<Question> questions) {
+        this.currentQuestions = questions;
+        this.currentQuestionIndex = 0;
+        this.correctAnswersCount = 0;
+        this.hiddenOptionIndices.clear();
+        clearOptionButtons();
+    }
+
+    private void clearOptionButtons() {
+        for (JButton btn : optionBtns) remove(btn);
+        optionBtns.clear();
+    }
+
+    private void showNextQuestion() {
+        clearOptionButtons();
+        hiddenOptionIndices.clear();
+        refreshItemBar();
+
+        if (currentQuestions == null || currentQuestionIndex >= currentQuestions.size()) {
+            finishBattle();
+            return;
+        }
+
+        Question q = currentQuestions.get(currentQuestionIndex);
+        int total = currentQuestions.size();
+
+        questionLabel.setText("<html><div style='text-align:center;'>"
+                + q.getQuestionText() + "</div></html>");
+
+        String progressText = learningMode
+                ? "Study  \u2022  " + (currentQuestionIndex + 1) + " / " + total
+                : enemyName + "  \u2022  " + (currentQuestionIndex + 1) + " / " + total;
+        progressLabel.setText(progressText);
+
+        List<String> raw = q.getOptions();
+        final List<String> options;
+        if (raw.isEmpty()) {
+            options = java.util.Arrays.asList("True", "False");
+        } else {
+            options = raw;
+        }
+
+        int btnY = 320;
+        int btnW = 280;
+        int btnX = (getWidth() - btnW) / 2;
+
+        for (int i = 0; i < options.size(); i++) {
+            int btnH = 44;
+            int y = btnY + i * (btnH + 6);
+
+            JButton btn = new JButton("<html><div style='text-align:center;'>"
+                    + options.get(i) + "</div></html>");
+            btn.setName("opt-" + i);
+            btn.setBounds(btnX, y, btnW, btnH);
+            btn.setFont(new Font("Serif", Font.BOLD, 13));
+            btn.setForeground(GOLD);
+            btn.setHorizontalAlignment(SwingConstants.CENTER);
+            btn.setOpaque(false);
+            btn.setContentAreaFilled(false);
+            btn.setBorderPainted(false);
+            btn.setFocusPainted(false);
+            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            final int idx = i;
+            btn.addActionListener(e -> handleAnswer(q, options.get(idx), idx));
+
+            btn.addMouseListener(new MouseAdapter() {
+                public void mouseEntered(MouseEvent e) { btn.setForeground(Color.WHITE); }
+                public void mouseExited(MouseEvent e) { btn.setForeground(GOLD); }
+            });
+
+            add(btn);
+            optionBtns.add(btn);
+        }
+
+        if (!learningMode && player.isCategoryMastered(q.getCategory())) {
+            applyMasteryHint(q);
+        }
+
+        layoutComponents();
+        revalidate();
+        repaint();
+    }
+
+    private void refreshItemBar() {
+        itemBar.removeAll();
         int potionCount = inventory.getKnowledgePotionCount();
         int charmCount = inventory.getMemoryCharmCount();
-        if (potionCount == 0 && charmCount == 0) return;
-
-        JPanel itemBar = new JPanel();
-        itemBar.setOpaque(false);
 
         if (potionCount > 0) {
-            JButton potionBtn = new JButton("Potion (x" + potionCount + ")");
+            potionBtn = new JButton("Potion x" + potionCount);
+            potionBtn.setFont(new Font("SansSerif", Font.PLAIN, 10));
+            potionBtn.setForeground(new Color(100, 220, 140));
+            potionBtn.setOpaque(false);
+            potionBtn.setContentAreaFilled(false);
+            potionBtn.setBorderPainted(false);
+            potionBtn.setFocusPainted(false);
             potionBtn.addActionListener(e -> useKnowledgePotion());
+            potionBtn.addMouseListener(new MouseAdapter() {
+                public void mouseEntered(MouseEvent e) { potionBtn.setForeground(Color.WHITE); }
+                public void mouseExited(MouseEvent e) { potionBtn.setForeground(new Color(100, 220, 140)); }
+            });
             itemBar.add(potionBtn);
         }
         if (charmCount > 0) {
-            JButton charmBtn = new JButton("Charm (x" + charmCount + ")");
+            charmBtn = new JButton("Charm x" + charmCount);
+            charmBtn.setFont(new Font("SansSerif", Font.PLAIN, 10));
+            charmBtn.setForeground(new Color(200, 180, 100));
+            charmBtn.setOpaque(false);
+            charmBtn.setContentAreaFilled(false);
+            charmBtn.setBorderPainted(false);
+            charmBtn.setFocusPainted(false);
             charmBtn.addActionListener(e -> useMemoryCharm());
+            charmBtn.addMouseListener(new MouseAdapter() {
+                public void mouseEntered(MouseEvent e) { charmBtn.setForeground(Color.WHITE); }
+                public void mouseExited(MouseEvent e) { charmBtn.setForeground(new Color(200, 180, 100)); }
+            });
             itemBar.add(charmBtn);
         }
+        itemBar.revalidate();
+        itemBar.repaint();
+    }
 
-        itemBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        optionsPanel.add(itemBar);
+    private void layoutComponents() {
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        int cardX = 20;
+        int cardW = w - 40;
+
+        questionLabel.setBounds(cardX + 10, 100, cardW - 20, 70);
+
+        progressLabel.setBounds(cardX, 22, cardW, 20);
+
+        int itemY = learningMode ? 280 : 280;
+        itemBar.setBounds(cardX, itemY, cardW, 30);
+
+        fleeBtn.setBounds(cardX, h - 60, cardW, 38);
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Serif", Font.BOLD, 13));
+        btn.setForeground(new Color(200, 160, 140));
+        btn.setHorizontalAlignment(SwingConstants.CENTER);
+        btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { btn.setForeground(Color.WHITE); }
+            public void mouseExited(MouseEvent e) { btn.setForeground(new Color(200, 160, 140)); }
+        });
+        return btn;
+    }
+
+    private void applyMasteryHint(Question q) {
+        List<String> options = q.getOptions();
+        if (options.isEmpty() || options.size() <= 2) return;
+
+        String correct = q.getCorrectAnswer();
+        List<Integer> wrongIndices = new ArrayList<>();
+        for (int i = 0; i < options.size(); i++) {
+            if (!options.get(i).startsWith(correct + ")")
+                    && !options.get(i).equalsIgnoreCase(correct)) {
+                wrongIndices.add(i);
+            }
+        }
+        if (wrongIndices.isEmpty()) return;
+
+        int hintIdx = wrongIndices.get(random.nextInt(wrongIndices.size()));
+        hiddenOptionIndices.add(hintIdx);
+
+        for (JButton btn : optionBtns) {
+            if (btn.getName() != null && btn.getName().equals("opt-" + hintIdx)) {
+                btn.setEnabled(false);
+                btn.setForeground(new Color(80, 60, 40));
+                btn.setText("(" + btn.getText() + ")");
+            }
+        }
     }
 
     private void useKnowledgePotion() {
         if (inventory.useKnowledgePotion()) {
             Question q = currentQuestions.get(currentQuestionIndex);
             correctAnswersCount++;
-            addScoreToPlayer();
+            player.addScore(10);
             JOptionPane.showMessageDialog(this,
                     "Knowledge Potion used! " + q.getCorrectAnswer() + " is correct.");
             soundManager.playCorrect();
@@ -190,7 +338,7 @@ public class BattlePanel extends BaseGamePanel {
             String correct = q.getCorrectAnswer();
             List<Integer> wrongIndices = new ArrayList<>();
             for (int i = 0; i < options.size(); i++) {
-                if (!options.get(i).startsWith(correct + ")") 
+                if (!options.get(i).startsWith(correct + ")")
                         && !options.get(i).equalsIgnoreCase(correct)) {
                     wrongIndices.add(i);
                 }
@@ -206,15 +354,13 @@ public class BattlePanel extends BaseGamePanel {
             hiddenOptionIndices.addAll(wrongIndices);
             soundManager.playCollect();
 
-            Component[] comps = optionsPanel.getComponents();
-            for (Component comp : comps) {
-                if (comp instanceof JButton && ((JButton) comp).getName() != null
-                        && ((JButton) comp).getName().startsWith("opt-")) {
-                    int idx = Integer.parseInt(((JButton) comp).getName().substring(4));
+            for (JButton btn : optionBtns) {
+                if (btn.getName() != null && btn.getName().startsWith("opt-")) {
+                    int idx = Integer.parseInt(btn.getName().substring(4));
                     if (hiddenOptionIndices.contains(idx)) {
-                        ((JButton) comp).setEnabled(false);
-                        ((JButton) comp).setText("--");
-                        ((JButton) comp).setBackground(new Color(60, 20, 20));
+                        btn.setEnabled(false);
+                        btn.setForeground(new Color(60, 20, 20));
+                        btn.setText("--");
                     }
                 }
             }
@@ -226,27 +372,36 @@ public class BattlePanel extends BaseGamePanel {
 
         if (q.checkAnswer(selected)) {
             correctAnswersCount++;
-            addScoreToPlayer();
+            int points = (!learningMode && player.hasSagesScroll()) ? 12 : 10;
+            player.addScore(points);
+            if (!learningMode) player.addXp(3);
             flashCorrect();
             soundManager.playCorrect();
-            JOptionPane.showMessageDialog(this, "Correct! The fragment weakens...");
+            if (learningMode) {
+                JOptionPane.showMessageDialog(this,
+                        "Correct! \"" + q.getCorrectAnswer() + "\" is right.");
+            } else {
+                JOptionPane.showMessageDialog(this, "Correct! The fragment weakens...");
+            }
         } else {
             flashWrong();
             soundManager.playWrong();
-            JOptionPane.showMessageDialog(this, "Incorrect. The fragment grows stronger...");
+            if (!learningMode) {
+                int penalty = Math.min(5, player.getScore());
+                if (penalty > 0) player.setScore(player.getScore() - penalty);
+                JOptionPane.showMessageDialog(this,
+                        "Incorrect. The fragment grows stronger...\n(-" + penalty + " KP)");
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Not quite. The correct answer is: " + q.getCorrectAnswer());
+            }
         }
         currentQuestionIndex++;
         showNextQuestion();
     }
 
-    private void addScoreToPlayer() {
-        int points = player.hasSagesScroll() ? 12 : 10;
-        player.addScore(points);
-        player.addXp(3);
-    }
-
     private void flashCorrect() {
-        flashColor = new Color(0, 255, 0, 60);
+        flashColor = new Color(0, 255, 0, 50);
         if (flashTimer != null) flashTimer.stop();
         flashTimer = new Timer(200, e -> { flashColor = null; repaint(); });
         flashTimer.setRepeats(false);
@@ -255,7 +410,7 @@ public class BattlePanel extends BaseGamePanel {
     }
 
     private void flashWrong() {
-        flashColor = new Color(255, 0, 0, 60);
+        flashColor = new Color(255, 0, 0, 50);
         if (flashTimer != null) flashTimer.stop();
         flashTimer = new Timer(200, e -> { flashColor = null; repaint(); });
         flashTimer.setRepeats(false);
@@ -265,12 +420,30 @@ public class BattlePanel extends BaseGamePanel {
 
     private void finishBattle() {
         animTimer.stop();
-        String message = battleEngine.getMotivationalMessage(correctAnswersCount, currentQuestions.size());
-        soundManager.playVictory();
-        JOptionPane.showMessageDialog(this,
-                "Battle Result: " + correctAnswersCount + "/" + currentQuestions.size()
-                        + "\n" + message + "\nLevel: " + player.getLevel()
-                        + " | XP: " + player.getXp() + "/15");
+        int total = currentQuestions != null ? currentQuestions.size() : 0;
+
+        if (learningMode && total > 0) {
+            double pct = ((double) correctAnswersCount / total) * 100;
+            if (pct >= 80 && learningCategory != null) {
+                player.masterCategory(learningCategory);
+                JOptionPane.showMessageDialog(this,
+                        "Category Mastered: " + learningCategory + "!\n"
+                                + "Score: " + correctAnswersCount + "/" + total
+                                + "\n\nThis knowledge will now help you in the Battleground.");
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Study Result: " + correctAnswersCount + "/" + total
+                                + "\n\nScore 80% or higher to master this category.");
+            }
+        } else {
+            String message = battleEngine.getMotivationalMessage(correctAnswersCount, total);
+            soundManager.playVictory();
+            JOptionPane.showMessageDialog(this,
+                    "Battle Result: " + correctAnswersCount + "/" + total
+                            + "\n" + message + "\nLevel: " + player.getLevel()
+                            + " | XP: " + player.getXp() + "/15");
+        }
+
         try {
             progressManager.saveProgress(player);
         } catch (GameDataException ex) {
@@ -283,83 +456,144 @@ public class BattlePanel extends BaseGamePanel {
             villagePanel.requestFocusInWindow();
         }
         returnScreen = "Village";
+        learningMode = false;
+        learningCategory = null;
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        drawEnemy(g);
-
-        if (enemyName != null && currentQuestionIndex < currentQuestions.size()) {
-            drawEnemyName(g);
-        }
-
-        if (flashColor != null) {
-            g.setColor(flashColor);
-            g.fillRect(0, 0, getWidth(), getHeight());
-        }
-    }
-
-    private void drawEnemy(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        double floatY = Math.sin(enemyPhase) * 8;
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) { g2.dispose(); return; }
 
-        int cx = (int) enemyX;
+        drawBackground(g2, w, h);
+
+        if (!learningMode) {
+            drawEnemy(g2);
+            drawEnemyHPBar(g2);
+        }
+
+        drawQuestionCard(g2, w);
+
+        if (flashColor != null) {
+            g2.setColor(flashColor);
+            g2.fillRect(0, 0, w, h);
+        }
+
+        g2.dispose();
+    }
+
+    private void drawBackground(Graphics2D g2, int w, int h) {
+        GradientPaint grad = new GradientPaint(0, 0, new Color(10, 8, 35),
+                0, h, new Color(20, 15, 50));
+        g2.setPaint(grad);
+        g2.fillRect(0, 0, w, h);
+
+        g2.setColor(new Color(30, 25, 60, 40));
+        for (int i = 0; i < 8; i++) {
+            int x = (i * 97 + 31) % w;
+            int y = (i * 73 + 17) % h;
+            g2.fillOval(x, y, 50 + i * 5, 30 + i * 3);
+        }
+
+        g2.setColor(new Color(255, 255, 255, 6));
+        for (int i = 0; i < 30; i++) {
+            int x = (i * 47 + 11) % w;
+            int y = (i * 61 + 13) % h;
+            g2.fillOval(x, y, 2, 2);
+        }
+    }
+
+    private void drawQuestionCard(Graphics2D g2, int w) {
+        int cardX = 18;
+        int cardY = 50;
+        int cardW = w - 36;
+        int cardH = 145;
+
+        g2.setColor(CARD_BG);
+        g2.fillRoundRect(cardX, cardY, cardW, cardH, 14, 14);
+        g2.setColor(GOLD_DIM);
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(cardX, cardY, cardW, cardH, 14, 14);
+    }
+
+    private void drawEnemy(Graphics2D g2) {
+        double floatY = Math.sin(enemyPhase) * 8;
+        int cx = enemyX;
         int cy = (int) (enemyY + floatY);
-        int size = 40;
+        int size = 55;
 
         g2.translate(cx, cy);
         g2.rotate(enemyRotate);
 
-        RadialGradientPaint glowPaint = new RadialGradientPaint(
-                0, 0, size + 10,
+        RadialGradientPaint glow = new RadialGradientPaint(
+                0, 0, size,
                 new float[] { 0.0f, 0.5f, 1.0f },
                 new Color[] {
-                        new Color(180, 60, 180, 80),
-                        new Color(100, 20, 100, 40),
+                        new Color(180, 60, 180, 60),
+                        new Color(100, 20, 100, 25),
                         new Color(0, 0, 0, 0)
                 });
-        g2.setPaint(glowPaint);
-        g2.fillOval(-size - 10, -size - 10, (size + 10) * 2, (size + 10) * 2);
+        g2.setPaint(glow);
+        g2.fillOval(-size, -size, size * 2, size * 2);
 
-        Color darkPurple = new Color(60, 20, 80);
-        Color edgePurple = new Color(150, 50, 180);
+        if (enemyImage != null) {
+            g2.drawImage(enemyImage, -24, -24, 48, 48, null);
+        } else {
+            Color darkPurple = new Color(60, 20, 80);
+            g2.setColor(darkPurple);
+            Polygon frag = new Polygon(
+                    new int[] { 0, 25, 12, -10, -25, -6 },
+                    new int[] { -25, -8, 15, 25, 6, -12 }, 6);
+            g2.fillPolygon(frag);
+        }
 
-        int[] xs = { 0, size, size / 2, -size / 3, -size, -size / 4 };
-        int[] ys = { -size, -size / 3, size / 2, size, size / 4, -size / 2 };
-        Polygon frag = new Polygon(xs, ys, xs.length);
+        g2.rotate(-enemyRotate);
+        g2.translate(-cx, -cy);
 
-        g2.setColor(darkPurple);
-        g2.fillPolygon(frag);
-        g2.setColor(edgePurple);
-        g2.setStroke(new BasicStroke(2));
-        g2.drawPolygon(frag);
-
-        int eyeSize = 6;
-        g2.setColor(Color.WHITE);
-        g2.fillOval(-10, -6, eyeSize * 2, eyeSize * 2);
-        g2.fillOval(-eyeSize, -6, eyeSize * 2, eyeSize * 2);
-        g2.setColor(Color.BLACK);
-        g2.fillOval(-8, -4, eyeSize, eyeSize);
-        g2.fillOval(-eyeSize + 2, -4, eyeSize, eyeSize);
-
-        g2.dispose();
-    }
-
-    private void drawEnemyName(Graphics g) {
-        Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2.setFont(new Font("Serif", Font.BOLD, 13));
+        g2.setFont(new Font("Serif", Font.BOLD, 11));
         FontMetrics fm = g2.getFontMetrics();
         int tw = fm.stringWidth(enemyName);
         int tx = enemyX - tw / 2;
-        int ty = enemyY + 55;
+        int ty = enemyY + 38;
         g2.setColor(new Color(0, 0, 0, 150));
         g2.fillRoundRect(tx - 6, ty - fm.getAscent(), tw + 12, fm.getHeight() + 4, 6, 6);
-        g2.setColor(new Color(255, 100, 100));
+        g2.setColor(new Color(255, 120, 120));
         g2.drawString(enemyName, tx, ty);
-        g2.dispose();
+    }
+
+    private void drawEnemyHPBar(Graphics2D g2) {
+        if (currentQuestions == null || currentQuestions.isEmpty()) return;
+        int bx = enemyX - 60;
+        int by = enemyY + 60;
+        int bw = 120;
+        int bh = 6;
+
+        int remaining = currentQuestions.size() - currentQuestionIndex;
+        double ratio = (double) remaining / currentQuestions.size();
+
+        g2.setColor(new Color(40, 10, 20));
+        g2.fillRoundRect(bx, by, bw, bh, 3, 3);
+
+        Color barColor;
+        if (ratio > 0.6) barColor = new Color(200, 60, 60);
+        else if (ratio > 0.3) barColor = new Color(220, 140, 20);
+        else barColor = new Color(220, 50, 20);
+
+        g2.setColor(barColor);
+        g2.fillRoundRect(bx, by, (int) (bw * ratio), bh, 3, 3);
+
+        g2.setColor(new Color(255, 255, 255, 40));
+        g2.drawRoundRect(bx, by, bw, bh, 3, 3);
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        layoutComponents();
     }
 }

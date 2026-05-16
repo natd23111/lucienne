@@ -1,8 +1,10 @@
 package Project;
 
 import java.io.*;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 public class ProgressManager {
     private static final String FILE_PATH = "savegame.txt";
@@ -19,13 +21,21 @@ public class ProgressManager {
             }
             String invStr = invPart.length() > 0 ? invPart.toString() : "none";
 
+            StringBuilder masteredPart = new StringBuilder();
+            for (String cat : player.getMasteredCategories()) {
+                if (masteredPart.length() > 0) masteredPart.append("|");
+                masteredPart.append(cat);
+            }
+            String masteredStr = masteredPart.length() > 0 ? masteredPart.toString() : "none";
+
             writer.write(player.getName() + ":" +
                     player.getScore() + ":" +
                     player.getCurrentStoryScene() + ":" +
                     invStr + ":" +
                     player.hasSagesScroll() + ":" +
                     player.getXp() + ":" +
-                    player.getLevel());
+                    player.getLevel() + ":" +
+                    masteredStr);
             System.out.println("Progress saved successfully!");
         } catch (IOException e) {
             throw new GameDataException("Error saving progress to file: " + FILE_PATH, e);
@@ -62,6 +72,14 @@ public class ProgressManager {
                 }
                 if (parts.length >= 7) {
                     player.setLevel(Integer.parseInt(parts[6]));
+                }
+                if (parts.length >= 8 && !parts[7].equals("none")) {
+                    Set<String> mastered = new HashSet<>();
+                    String[] cats = parts[7].split("\\|");
+                    for (String cat : cats) {
+                        if (!cat.trim().isEmpty()) mastered.add(cat.trim());
+                    }
+                    player.setMasteredCategories(mastered);
                 }
             }
         } catch (FileNotFoundException e) {

@@ -2,6 +2,8 @@ package Project;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
@@ -48,12 +50,25 @@ public class BattleGroundPanel extends BaseGamePanel {
         setLayout(null);
         setOpaque(false);
 
-        spriteSheet = new ImageIcon("assets/jeff_spritesheet.png").getImage();
+        setBackgroundImage("assets/battleground_bg.png");
+        spriteSheet = new ImageIcon("assets/jeff_wizard_spritesheet.png").getImage();
         encounterThreshold = 35 + random.nextInt(16);
 
         gameLoop = new Timer(16, e -> {
             updateGame();
             repaint();
+        });
+
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                activate();
+            }
+
+            @Override
+            public void componentHidden(ComponentEvent e) {
+                deactivate();
+            }
         });
 
         setFocusable(true);
@@ -76,7 +91,6 @@ public class BattleGroundPanel extends BaseGamePanel {
         });
 
         loadQuestions();
-        gameLoop.start();
     }
 
     private void loadQuestions() {
@@ -137,13 +151,17 @@ public class BattleGroundPanel extends BaseGamePanel {
     }
 
     private void triggerEncounter() {
+        deactivate();
         stepCount = 0;
         encounterThreshold = 35 + random.nextInt(16);
 
         if (!questionsLoaded) {
             loadQuestions();
         }
-        if (!questionsLoaded) return;
+        if (!questionsLoaded) {
+            activate();
+            return;
+        }
 
         List<Question> battleQuestions = new ArrayList<>(allQuestions);
         Collections.shuffle(battleQuestions);
@@ -166,38 +184,36 @@ public class BattleGroundPanel extends BaseGamePanel {
         cardLayout.show(mainPanel, "BattleQuiz");
     }
 
+    private void activate() {
+        stepCount = 0;
+        isMoving = false;
+        animFrame = 0;
+        animTick = 0;
+        for (int i = 0; i < keys.length; i++) keys[i] = false;
+        gameLoop.start();
+        requestFocusInWindow();
+    }
+
+    private void deactivate() {
+        gameLoop.stop();
+        isMoving = false;
+        animFrame = 0;
+        animTick = 0;
+        for (int i = 0; i < keys.length; i++) keys[i] = false;
+    }
+
     @Override
     public void addNotify() {
         super.addNotify();
-        requestFocusInWindow();
+        activate();
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        drawDarkOverlay(g);
         drawHero(g);
         drawHUD(g);
-    }
-
-    private void drawDarkOverlay(Graphics g) {
-        g.setColor(new Color(10, 5, 25, 140));
-        g.fillRect(0, 0, getWidth(), getHeight());
-
-        g.setColor(new Color(80, 60, 120, 40));
-        for (int i = 0; i < 12; i++) {
-            int mx = (i * 73 + 37) % getWidth();
-            int my = (i * 47 + 19) % getHeight();
-            g.fillOval(mx, my, 60 + i * 3, 40 + i * 2);
-        }
-
-        g.setColor(new Color(255, 255, 255, 8));
-        for (int i = 0; i < 20; i++) {
-            int px = (i * 67 + 13) % getWidth();
-            int py = (i * 91 + 7) % getHeight();
-            g.fillOval(px, py, 2, 2);
-        }
     }
 
     private void drawHero(Graphics g) {

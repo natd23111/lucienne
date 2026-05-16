@@ -7,57 +7,57 @@ import javax.sound.sampled.LineUnavailableException;
 
 public class SoundManager {
 
-    private static final int SAMPLE_RATE = 8000;
+    private static final int SAMPLE_RATE = 22050;
 
     public void playCorrect() {
         playThread(() -> {
-            playTone(800, 80, 0.6);
+            playTone(500, 100, 0.5);
             sleep(60);
-            playTone(1200, 120, 0.6);
+            playTone(700, 150, 0.5);
         });
     }
 
     public void playWrong() {
         playThread(() -> {
-            playTone(200, 150, 0.5);
+            playTone(180, 150, 0.4);
             sleep(40);
-            playTone(120, 200, 0.4);
+            playTone(110, 220, 0.35);
         });
     }
 
     public void playCollect() {
         playThread(() -> {
-            playTone(1000, 60, 0.4);
+            playTone(500, 70, 0.35);
             sleep(40);
-            playTone(1200, 60, 0.4);
+            playTone(600, 70, 0.35);
             sleep(40);
-            playTone(1400, 100, 0.5);
+            playTone(750, 120, 0.4);
         });
     }
 
     public void playPurchase() {
         playThread(() -> {
-            playTone(1500, 80, 0.5);
+            playTone(600, 90, 0.45);
             sleep(30);
-            playTone(1500, 80, 0.5);
+            playTone(600, 90, 0.45);
             sleep(30);
-            playTone(1800, 120, 0.5);
+            playTone(800, 140, 0.45);
         });
     }
 
     public void playDamage() {
-        playThread(() -> playTone(80, 200, 0.5));
+        playThread(() -> playTone(70, 250, 0.45));
     }
 
     public void playVictory() {
         playThread(() -> {
-            playTone(600, 100, 0.5);
-            sleep(60);
-            playTone(800, 100, 0.5);
-            sleep(60);
-            playTone(1000, 100, 0.5);
-            sleep(60);
-            playTone(1200, 200, 0.6);
+            playTone(350, 120, 0.45);
+            sleep(70);
+            playTone(450, 120, 0.45);
+            sleep(70);
+            playTone(550, 120, 0.45);
+            sleep(70);
+            playTone(650, 250, 0.5);
         });
     }
 

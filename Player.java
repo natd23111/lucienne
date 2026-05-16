@@ -1,7 +1,9 @@
 package Project;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class Player {
     private String name;
@@ -12,6 +14,7 @@ public class Player {
     private boolean hasSagesScroll;
     private int xp;
     private int level;
+    private Set<String> masteredCategories;
 
     public Player(String name) {
         this.name = name;
@@ -22,6 +25,7 @@ public class Player {
         this.hasSagesScroll = false;
         this.xp = 0;
         this.level = 1;
+        this.masteredCategories = new HashSet<>();
     }
 
     public String getName() { return name; }
@@ -70,4 +74,9 @@ public class Player {
     public void setCurrentStoryScene(String sceneId) { this.currentStoryScene = sceneId; }
     public Map<String, Integer> getStoryChoices() { return storyChoices; }
     public void recordChoice(String sceneId, int choiceIndex) { storyChoices.put(sceneId, choiceIndex); }
+
+    public boolean isCategoryMastered(String category) { return masteredCategories.contains(category); }
+    public void masterCategory(String category) { masteredCategories.add(category); }
+    public Set<String> getMasteredCategories() { return masteredCategories; }
+    public void setMasteredCategories(Set<String> cats) { this.masteredCategories = (cats != null) ? new HashSet<>(cats) : new HashSet<>(); }
 }

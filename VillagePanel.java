@@ -12,6 +12,7 @@ import java.util.Random;
 public class VillagePanel extends BaseGamePanel {
     private Image heroSprite;
     private Image spriteSheet;
+    private Image scrollIcon;
     private int heroX = 180;
     private int heroY = 320;
     private int heroW = 48;
@@ -43,6 +44,7 @@ public class VillagePanel extends BaseGamePanel {
         setBackgroundImage("assets/village_bg.png");
         heroSprite = new ImageIcon("assets/jeff_sprite.png").getImage();
         spriteSheet = new ImageIcon("assets/jeff_spritesheet.png").getImage();
+        scrollIcon = new ImageIcon("assets/icon_scroll.png").getImage();
 
         zones.add(new InteractionZone(30, 100, 140, 100, "KnowledgeGarden", "Explore Knowledge Garden"));
         zones.add(new InteractionZone(190, 100, 140, 100, "BattleGround", "Enter Battle Ground"));
@@ -316,12 +318,16 @@ public class VillagePanel extends BaseGamePanel {
         }
 
         void draw(Graphics g) {
-            Color gold = new Color(255, 215, 0, 180);
-            Color glow = new Color(255, 255, 100, 100);
-            g.setColor(glow);
-            g.fillOval((int) x - 10, (int) y - 10, 20, 20);
-            g.setColor(gold);
-            g.fillOval((int) x - 6, (int) y - 6, 12, 12);
+            if (scrollIcon != null) {
+                g.drawImage(scrollIcon, (int) x - 12, (int) y - 12, 64, 64, null);
+            } else {
+                Color gold = new Color(255, 215, 0, 180);
+                Color glow = new Color(255, 255, 100, 100);
+                g.setColor(glow);
+                g.fillOval((int) x - 10, (int) y - 10, 20, 20);
+                g.setColor(gold);
+                g.fillOval((int) x - 6, (int) y - 6, 12, 12);
+            }
         }
     }
 
