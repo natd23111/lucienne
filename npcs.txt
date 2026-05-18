@@ -1,6 +1,6 @@
 NAME:Piercehardt
-X:80
-Y:320
+X:40
+Y:250
 SPRITE:npc_piercehardt.png
 DIALOGUE:Welcome to Lucienne, young Jeff. I am Piercehardt Luminous, the Guardian of Wisdom.
 DIALOGUE:This kingdom was once filled with knowledge and wisdom, but Miss Shona created the Knowledge Crystal and trapped it all.
@@ -9,8 +9,8 @@ DIALOGUE:When you are ready, enter the Battleground and defeat the Evil Memory F
 END
 
 NAME:Scholar Elara
-X:280
-Y:180
+X:180
+Y:250
 SPRITE:npc_villager_01.png
 DIALOGUE:SDG 4 stands for Sustainable Development Goal 4: Quality Education.
 DIALOGUE:It aims to ensure inclusive and equitable quality education and promote lifelong learning for all by the year 2030.
@@ -19,7 +19,7 @@ END
 
 NAME:Elder Tomas
 X:100
-Y:470
+Y:490
 SPRITE:npc_villager_02.png
 DIALOGUE:Did you know? Over 244 million children and youth are still out of school worldwide.
 DIALOGUE:Gender equality in education is a key target - girls and boys must have equal access to learning.
@@ -28,7 +28,7 @@ END
 
 NAME:Shopkeeper Mira
 X:220
-Y:440
+Y:480
 SPRITE:npc_shopkeeper.png
 DIALOGUE:Welcome to the Village Shop! I sell items that can help you in your quiz battles.
 DIALOGUE:Knowledge Potions can auto-correct a question for you. Memory Charms eliminate wrong answers.

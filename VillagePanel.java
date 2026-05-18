@@ -4,6 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -32,6 +34,16 @@ public class VillagePanel extends BaseGamePanel {
     private List<NPC> npcs = new ArrayList<>();
     private List<String> scrollFacts = new ArrayList<>();
 
+    // Dialogue overlay state
+    private boolean inDialogue = false;
+    private List<String> dialogueLines = new ArrayList<>();
+    private int dialogueIndex = 0;
+    private String dialogueFullText = "";
+    private int dialogueCharIndex = 0;
+    private boolean dialogueTextComplete = false;
+    private Timer dialogueTimer;
+    private String dialogueNpcName = "";
+
     public VillagePanel(CardLayout cardLayout, JPanel mainPanel, Player player, SoundManager soundManager) {
         super(cardLayout, mainPanel, player);
         this.soundManager = soundManager;
@@ -59,11 +71,32 @@ public class VillagePanel extends BaseGamePanel {
             repaint();
         });
 
+        dialogueTimer = new Timer(28, e -> {
+            if (dialogueCharIndex < dialogueFullText.length()) {
+                dialogueCharIndex++;
+                repaint();
+            } else if (!dialogueTextComplete) {
+                dialogueTextComplete = true;
+                dialogueTimer.stop();
+                repaint();
+            }
+        });
+
         setFocusable(true);
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 int code = e.getKeyCode();
+                if (inDialogue) {
+                    if (code == KeyEvent.VK_E || code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
+                        if (!dialogueTextComplete && dialogueTimer.isRunning()) {
+                            skipDialogueTyping();
+                        } else {
+                            advanceDialogue();
+                        }
+                    }
+                    return;
+                }
                 if (code >= 0 && code < keys.length) {
                     keys[code] = true;
                 }
@@ -81,9 +114,28 @@ public class VillagePanel extends BaseGamePanel {
             }
         });
 
-        for (int i = 0; i < 8; i++) {
-            fragments.add(new FloatingFragment(
-                    random.nextInt(300), random.nextInt(500)));
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (inDialogue) {
+                    if (!dialogueTextComplete && dialogueTimer.isRunning()) {
+                        skipDialogueTyping();
+                    } else {
+                        advanceDialogue();
+                    }
+                }
+            }
+        });
+
+        int heroStartCX = hero.getCenterX();
+        int heroStartCY = hero.getCenterY();
+        for (int i = 0; i < 3; i++) {
+            int fx, fy;
+            do {
+                fx = 20 + random.nextInt(320);
+                fy = 60 + random.nextInt(560);
+            } while (Math.hypot(fx - heroStartCX, fy - heroStartCY) < 120);
+            fragments.add(new FloatingFragment(fx, fy));
         }
 
         gameLoop.start();
@@ -97,6 +149,12 @@ public class VillagePanel extends BaseGamePanel {
     }
 
     private void updateGame() {
+        if (inDialogue) {
+            // Pause hero animation while in dialogue
+            hero.resetAnimation();
+            return;
+        }
+
         hero.update(
             keys[KeyEvent.VK_W] || keys[KeyEvent.VK_UP],
             keys[KeyEvent.VK_S] || keys[KeyEvent.VK_DOWN],
@@ -154,7 +212,7 @@ public class VillagePanel extends BaseGamePanel {
                 for (NPC npc : npcs) {
                     Rectangle npcRect = new Rectangle(npc.getX(), npc.getY(), 48, 64);
                     if (heroRect.intersects(npcRect)) {
-                        showNPCDialogue(npc);
+                        startNPCDialogue(npc);
                         handled = true;
                         break;
                     }
@@ -224,6 +282,10 @@ public class VillagePanel extends BaseGamePanel {
         }
 
         drawHUD(g);
+
+        if (inDialogue) {
+            drawDialogueOverlay(g);
+        }
     }
 
     private void drawHero(Graphics g) {
@@ -343,16 +405,175 @@ public class VillagePanel extends BaseGamePanel {
         return scrollFacts.get(collected);
     }
 
-    private void showNPCDialogue(NPC npc) {
+    private void startNPCDialogue(NPC npc) {
         if (npc.getDialogue().isEmpty()) return;
-        StringBuilder msg = new StringBuilder();
-        for (String line : npc.getDialogue()) {
-            if (msg.length() > 0) msg.append("\n\n");
-            msg.append(line);
-        }
-        JOptionPane.showMessageDialog(this, msg.toString(),
-                npc.getName(), JOptionPane.PLAIN_MESSAGE);
+        inDialogue = true;
+        dialogueLines = new ArrayList<>(npc.getDialogue());
+        dialogueIndex = 0;
+        dialogueNpcName = npc.getName();
+        loadDialogueLine();
         clearInputState();
+    }
+
+    private void loadDialogueLine() {
+        if (dialogueIndex >= dialogueLines.size()) {
+            finishDialogue();
+            return;
+        }
+        dialogueFullText = dialogueLines.get(dialogueIndex);
+        dialogueCharIndex = 0;
+        dialogueTextComplete = false;
+        dialogueTimer.start();
+        repaint();
+    }
+
+    private void skipDialogueTyping() {
+        dialogueCharIndex = dialogueFullText.length();
+        dialogueTextComplete = true;
+        dialogueTimer.stop();
+        repaint();
+    }
+
+    private void advanceDialogue() {
+        dialogueIndex++;
+        loadDialogueLine();
+    }
+
+    private void finishDialogue() {
+        inDialogue = false;
+        dialogueTimer.stop();
+        dialogueLines.clear();
+        dialogueNpcName = "";
+        clearInputState();
+        repaint();
+    }
+
+    private static final int DIALOGUE_MARGIN = 14;
+    private static final int DIALOGUE_TOP = 420;
+    private static final int DIALOGUE_PAD_X = 16;
+    private static final int DIALOGUE_TEXT_TOP = 448;
+    private static final Font DIALOGUE_FONT = new Font("Serif", Font.PLAIN, 14);
+    private static final Font DIALOGUE_TITLE_FONT = new Font("Serif", Font.BOLD, 14);
+    private static final Font DIALOGUE_HINT_FONT = new Font("SansSerif", Font.PLAIN, 11);
+    private static final Color DIALOGUE_GOLD = new Color(255, 215, 0);
+    private static final Color DIALOGUE_TEXT_COLOR = new Color(220, 220, 240);
+
+    private void drawDialogueOverlay(Graphics g) {
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        // Dim the rest of the screen slightly
+        g.setColor(new Color(0, 0, 0, 80));
+        g.fillRect(0, 0, w, h);
+
+        // Backdrop
+        int bw = w - DIALOGUE_MARGIN * 2;
+        int bh = h - DIALOGUE_TOP - 20;
+        if (bw <= 0 || bh <= 0) return;
+
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        // Draw rounded backdrop
+        g2.setColor(new Color(10, 10, 30, 220));
+        g2.fillRoundRect(DIALOGUE_MARGIN, DIALOGUE_TOP, bw, bh, 18, 18);
+        g2.setColor(new Color(255, 215, 0, 90));
+        g2.setStroke(new BasicStroke(2));
+        g2.drawRoundRect(DIALOGUE_MARGIN, DIALOGUE_TOP, bw, bh, 18, 18);
+
+        // Draw NPC name title
+        g2.setColor(DIALOGUE_GOLD);
+        g2.setFont(DIALOGUE_TITLE_FONT);
+        String title = "--- " + dialogueNpcName + " ---";
+        FontMetrics fmTitle = g2.getFontMetrics();
+        int tw = fmTitle.stringWidth(title);
+        g2.drawString(title, (w - tw) / 2, DIALOGUE_TOP - 10);
+
+        // Draw typewriter text
+        if (!dialogueFullText.isEmpty()) {
+            g2.setFont(DIALOGUE_FONT);
+            g2.setColor(DIALOGUE_TEXT_COLOR);
+            FontMetrics fm = g2.getFontMetrics();
+            int lineH = fm.getHeight();
+            int textX = DIALOGUE_MARGIN + DIALOGUE_PAD_X;
+            int maxTextW = bw - DIALOGUE_PAD_X * 2;
+            int textBottom = DIALOGUE_TOP + bh - 28;
+
+            String visible = dialogueFullText.substring(0, Math.min(dialogueCharIndex, dialogueFullText.length()));
+            String[] rawLines = visible.split("\n", -1);
+
+            int y = DIALOGUE_TEXT_TOP;
+            lineLoop:
+            for (int li = 0; li < rawLines.length; li++) {
+                List<String> wrapped = wrapText(rawLines[li], fm, maxTextW);
+                for (int wi = 0; wi < wrapped.size(); wi++) {
+                    if (y + lineH > textBottom) break lineLoop;
+                    g2.drawString(wrapped.get(wi), textX, y);
+                    y += lineH;
+                }
+            }
+
+            // Cursor
+            if (!dialogueTextComplete && dialogueTimer.isRunning() && dialogueCharIndex < dialogueFullText.length()) {
+                g2.setColor(DIALOGUE_GOLD);
+                g2.fillRect(textX, y - lineH + fm.getAscent() + 2, 7, 3);
+            }
+        }
+
+        // Hint
+        if (dialogueTextComplete) {
+            g2.setFont(DIALOGUE_HINT_FONT);
+            g2.setColor(new Color(180, 160, 140));
+            String hint = "Press E, Space, Enter or Click to continue";
+            FontMetrics fmHint = g2.getFontMetrics();
+            int hw = fmHint.stringWidth(hint);
+            g2.drawString(hint, (w - hw) / 2, DIALOGUE_TOP + bh - 10);
+        }
+
+        g2.dispose();
+    }
+
+    private List<String> wrapText(String text, FontMetrics fm, int maxWidth) {
+        List<String> lines = new ArrayList<>();
+        if (text.isEmpty()) {
+            lines.add("");
+            return lines;
+        }
+
+        String[] words = text.split(" ", -1);
+        StringBuilder line = new StringBuilder();
+
+        for (String word : words) {
+            String candidate = line.length() == 0 ? word : line + " " + word;
+            if (fm.stringWidth(candidate) <= maxWidth) {
+                if (line.length() > 0) line.append(" ");
+                line.append(word);
+            } else {
+                if (line.length() > 0) {
+                    lines.add(line.toString());
+                    line = new StringBuilder();
+                }
+                if (fm.stringWidth(word) <= maxWidth) {
+                    line.append(word);
+                } else {
+                    StringBuilder part = new StringBuilder();
+                    for (int i = 0; i < word.length(); i++) {
+                        char c = word.charAt(i);
+                        if (fm.stringWidth(part.toString() + c) > maxWidth && part.length() > 0) {
+                            lines.add(part.toString());
+                            part = new StringBuilder();
+                        }
+                        part.append(c);
+                    }
+                    if (part.length() > 0) line.append(part.toString());
+                }
+            }
+        }
+
+        if (line.length() > 0) lines.add(line.toString());
+        return lines;
     }
 
     private void drawNPC(Graphics g, NPC npc) {

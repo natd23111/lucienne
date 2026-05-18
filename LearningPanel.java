@@ -37,7 +37,7 @@ public class LearningPanel extends BaseGamePanel {
         headerPanel.add(titleLabel);
 
         JLabel subtitle = new JLabel("<html><div style='text-align:center;'>"
-                + "Study SDG 4 safely. Score 80%+ to master a topic.</div></html>",
+                + "Study SDG 4 safely.</div></html>",
                 SwingConstants.CENTER);
         subtitle.setForeground(new Color(160, 150, 200));
         subtitle.setFont(new Font("SansSerif", Font.ITALIC, 12));
