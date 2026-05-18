@@ -116,6 +116,12 @@ public class BattleGroundPanel extends BaseGamePanel {
         }
     }
 
+    private void clearInputState() {
+        for (int i = 0; i < keys.length; i++) {
+            keys[i] = false;
+        }
+    }
+
     private void triggerEncounter() {
         deactivate();
         stepCount = 0;
@@ -144,6 +150,7 @@ public class BattleGroundPanel extends BaseGamePanel {
         JOptionPane.showMessageDialog(this,
                 "An Evil Memory Fragment materializes from the mist!\n\n\""
                         + enemyName + " appears before you...\"");
+        clearInputState();
 
         battlePanel.setReturnScreen("BattleGround");
         battlePanel.startBattle(battleQuestions, enemyName);

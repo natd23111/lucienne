@@ -89,6 +89,13 @@ public class VillagePanel extends BaseGamePanel {
         gameLoop.start();
     }
 
+    private void clearInputState() {
+        for (int i = 0; i < keys.length; i++) {
+            keys[i] = false;
+        }
+        ePressed = false;
+    }
+
     private void updateGame() {
         hero.update(
             keys[KeyEvent.VK_W] || keys[KeyEvent.VK_UP],
@@ -131,10 +138,12 @@ public class VillagePanel extends BaseGamePanel {
                             JOptionPane.showMessageDialog(this,
                                     "Error saving game: " + ex.getMessage(),
                                     "Save Error", JOptionPane.ERROR_MESSAGE);
+                            clearInputState();
                             return;
                         }
                         JOptionPane.showMessageDialog(this,
                                 "Progress Saved to savegame.txt!");
+                        clearInputState();
                     }
                     handled = true;
                     break;
@@ -171,6 +180,7 @@ public class VillagePanel extends BaseGamePanel {
                     JOptionPane.showMessageDialog(this,
                             "Knowledge Scroll Collected!\n\n" + fact,
                             "Scroll of Knowledge", JOptionPane.INFORMATION_MESSAGE);
+                    clearInputState();
                 }
             }
         }
@@ -342,6 +352,7 @@ public class VillagePanel extends BaseGamePanel {
         }
         JOptionPane.showMessageDialog(this, msg.toString(),
                 npc.getName(), JOptionPane.PLAIN_MESSAGE);
+        clearInputState();
     }
 
     private void drawNPC(Graphics g, NPC npc) {
