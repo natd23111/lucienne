@@ -18,15 +18,7 @@ public class BattleGroundPanel extends BaseGamePanel {
     private QuestionParser questionParser;
     private SoundManager soundManager;
 
-    private Image spriteSheet;
-    private int heroX = 180;
-    private int heroY = 320;
-    private int heroW = 48;
-    private int heroH = 64;
-    private int facingDir = 0;
-    private int animFrame = 0;
-    private int animTick = 0;
-    private boolean isMoving = false;
+    private Hero hero;
 
     private Timer gameLoop;
     private boolean[] keys = new boolean[256];
@@ -51,7 +43,8 @@ public class BattleGroundPanel extends BaseGamePanel {
         setOpaque(false);
 
         setBackgroundImage("assets/battleground_bg.png");
-        spriteSheet = new ImageIcon("assets/jeff_wizard_spritesheet.png").getImage();
+        Image spriteSheet = new ImageIcon("assets/jeff_wizard_spritesheet.png").getImage();
+        hero = new Hero(spriteSheet, null, 180, 320, 48, 64, 3);
         encounterThreshold = 35 + random.nextInt(16);
 
         gameLoop = new Timer(16, e -> {
@@ -107,47 +100,20 @@ public class BattleGroundPanel extends BaseGamePanel {
     }
 
     private void updateGame() {
-        int prevX = heroX;
-        int prevY = heroY;
-        int speed = 3;
+        hero.update(
+            keys[KeyEvent.VK_W] || keys[KeyEvent.VK_UP],
+            keys[KeyEvent.VK_S] || keys[KeyEvent.VK_DOWN],
+            keys[KeyEvent.VK_A] || keys[KeyEvent.VK_LEFT],
+            keys[KeyEvent.VK_D] || keys[KeyEvent.VK_RIGHT],
+            getWidth(), getHeight()
+        );
 
-        if (keys[KeyEvent.VK_W] || keys[KeyEvent.VK_UP])
-            heroY -= speed;
-        if (keys[KeyEvent.VK_S] || keys[KeyEvent.VK_DOWN])
-            heroY += speed;
-        if (keys[KeyEvent.VK_A] || keys[KeyEvent.VK_LEFT])
-            heroX -= speed;
-        if (keys[KeyEvent.VK_D] || keys[KeyEvent.VK_RIGHT])
-            heroX += speed;
-
-        int dx = heroX - prevX;
-        int dy = heroY - prevY;
-        isMoving = (dx != 0 || dy != 0);
-
-        if (isMoving) {
-            if (Math.abs(dx) >= Math.abs(dy)) {
-                facingDir = (dx > 0) ? 2 : 1;
-            } else {
-                facingDir = (dy > 0) ? 0 : 3;
-            }
-
-            animTick++;
-            if (animTick >= 8) {
-                animTick = 0;
-                animFrame = (animFrame + 1) % 4;
-            }
-
+        if (hero.isMoving()) {
             stepCount++;
             if (stepCount >= encounterThreshold) {
                 triggerEncounter();
             }
-        } else {
-            animFrame = 0;
-            animTick = 0;
         }
-
-        heroX = Math.max(0, Math.min(heroX, getWidth() - heroW));
-        heroY = Math.max(0, Math.min(heroY, getHeight() - heroH));
     }
 
     private void triggerEncounter() {
@@ -186,9 +152,7 @@ public class BattleGroundPanel extends BaseGamePanel {
 
     private void activate() {
         stepCount = 0;
-        isMoving = false;
-        animFrame = 0;
-        animTick = 0;
+        hero.resetAnimation();
         for (int i = 0; i < keys.length; i++) keys[i] = false;
         gameLoop.start();
         requestFocusInWindow();
@@ -196,9 +160,7 @@ public class BattleGroundPanel extends BaseGamePanel {
 
     private void deactivate() {
         gameLoop.stop();
-        isMoving = false;
-        animFrame = 0;
-        animTick = 0;
+        hero.resetAnimation();
         for (int i = 0; i < keys.length; i++) keys[i] = false;
     }
 
@@ -217,22 +179,7 @@ public class BattleGroundPanel extends BaseGamePanel {
     }
 
     private void drawHero(Graphics g) {
-        if (spriteSheet != null) {
-            int sheetCols = 4;
-            int sheetRows = 4;
-            int fw = spriteSheet.getWidth(this) / sheetCols;
-            int fh = spriteSheet.getHeight(this) / sheetRows;
-            if (fw > 0 && fh > 0) {
-                int sx = animFrame * fw;
-                int sy = facingDir * fh;
-                g.drawImage(spriteSheet, heroX, heroY, heroX + heroW, heroY + heroH,
-                        sx, sy, sx + fw, sy + fh, this);
-                return;
-            }
-        }
-
-        g.setColor(Color.BLUE);
-        g.fillRect(heroX, heroY, heroW, heroH);
+        hero.draw(g, this);
     }
 
     private void drawHUD(Graphics g) {

@@ -14,17 +14,8 @@ import java.util.List;
 import java.util.Random;
 
 public class VillagePanel extends BaseGamePanel {
-    private Image heroSprite;
-    private Image spriteSheet;
+    private Hero hero;
     private Image scrollIcon;
-    private int heroX = 180;
-    private int heroY = 320;
-    private int heroW = 48;
-    private int heroH = 64;
-    private int facingDir = 0;
-    private int animFrame = 0;
-    private int animTick = 0;
-    private boolean isMoving = false;
 
     private Timer gameLoop;
     private boolean[] keys = new boolean[256];
@@ -49,9 +40,10 @@ public class VillagePanel extends BaseGamePanel {
         setOpaque(false);
 
         setBackgroundImage("assets/village_bg.png");
-        heroSprite = new ImageIcon("assets/jeff_wizard.png").getImage();
-        spriteSheet = new ImageIcon("assets/jeff_wizard_spritesheet.png").getImage();
+        Image heroSprite = new ImageIcon("assets/jeff_sprite.png").getImage();
+        Image spriteSheet = new ImageIcon("assets/jeff_spritesheet.png").getImage();
         scrollIcon = new ImageIcon("assets/icon_scroll.png").getImage();
+        hero = new Hero(spriteSheet, heroSprite, 180, 320, 48, 64, 3);
 
         zones.add(new InteractionZone(30, 100, 140, 100, "KnowledgeGarden", "Explore Knowledge Garden"));
         zones.add(new InteractionZone(190, 100, 140, 100, "BattleGround", "Enter Battle Ground"));
@@ -98,45 +90,16 @@ public class VillagePanel extends BaseGamePanel {
     }
 
     private void updateGame() {
-        int prevX = heroX;
-        int prevY = heroY;
-        int speed = 3;
-
-        if (keys[KeyEvent.VK_W] || keys[KeyEvent.VK_UP])
-            heroY -= speed;
-        if (keys[KeyEvent.VK_S] || keys[KeyEvent.VK_DOWN])
-            heroY += speed;
-        if (keys[KeyEvent.VK_A] || keys[KeyEvent.VK_LEFT])
-            heroX -= speed;
-        if (keys[KeyEvent.VK_D] || keys[KeyEvent.VK_RIGHT])
-            heroX += speed;
-
-        int dx = heroX - prevX;
-        int dy = heroY - prevY;
-        isMoving = (dx != 0 || dy != 0);
-
-        if (isMoving) {
-            if (Math.abs(dx) >= Math.abs(dy)) {
-                facingDir = (dx > 0) ? 2 : 1;
-            } else {
-                facingDir = (dy > 0) ? 0 : 3;
-            }
-
-            animTick++;
-            if (animTick >= 8) {
-                animTick = 0;
-                animFrame = (animFrame + 1) % 4;
-            }
-        } else {
-            animFrame = 0;
-            animTick = 0;
-        }
-
-        heroX = Math.max(0, Math.min(heroX, getWidth() - heroW));
-        heroY = Math.max(0, Math.min(heroY, getHeight() - heroH));
+        hero.update(
+            keys[KeyEvent.VK_W] || keys[KeyEvent.VK_UP],
+            keys[KeyEvent.VK_S] || keys[KeyEvent.VK_DOWN],
+            keys[KeyEvent.VK_A] || keys[KeyEvent.VK_LEFT],
+            keys[KeyEvent.VK_D] || keys[KeyEvent.VK_RIGHT],
+            getWidth(), getHeight()
+        );
 
         promptText = null;
-        Rectangle heroRect = new Rectangle(heroX, heroY, heroW, heroH);
+        Rectangle heroRect = new Rectangle(hero.getX(), hero.getY(), hero.getWidth(), hero.getHeight());
         for (InteractionZone zone : zones) {
             if (heroRect.intersects(zone.bounds)) {
                 promptText = zone.prompt;
@@ -195,8 +158,8 @@ public class VillagePanel extends BaseGamePanel {
             FloatingFragment f = it.next();
             f.update();
 
-            double fdx = (heroX + heroW / 2.0) - f.x;
-            double fdy = (heroY + heroH / 2.0) - f.y;
+            double fdx = hero.getCenterX() - f.x;
+            double fdy = hero.getCenterY() - f.y;
             if (Math.sqrt(fdx * fdx + fdy * fdy) < 40) {
                 player.addScore(5);
                 soundManager.playCollect();
@@ -254,30 +217,7 @@ public class VillagePanel extends BaseGamePanel {
     }
 
     private void drawHero(Graphics g) {
-        if (spriteSheet != null) {
-            int sheetCols = 4;
-            int sheetRows = 4;
-            int fw = spriteSheet.getWidth(this) / sheetCols;
-            int fh = spriteSheet.getHeight(this) / sheetRows;
-            if (fw > 0 && fh > 0) {
-                int sx = animFrame * fw;
-                int sy = facingDir * fh;
-                g.drawImage(spriteSheet, heroX, heroY, heroX + heroW, heroY + heroH,
-                        sx, sy, sx + fw, sy + fh, this);
-                return;
-            }
-        }
-
-        if (heroSprite != null) {
-            g.drawImage(heroSprite, heroX, heroY, heroW, heroH, this);
-            return;
-        }
-
-        g.setColor(Color.BLUE);
-        g.fillRect(heroX, heroY, heroW, heroH);
-        g.setColor(Color.WHITE);
-        String[] dirLabels = { "D", "L", "R", "U" };
-        g.drawString(dirLabels[facingDir], heroX + heroW / 2 - 4, heroY + heroH / 2 + 4);
+        hero.draw(g, this);
     }
 
     private void drawPrompt(Graphics g) {
@@ -291,8 +231,8 @@ public class VillagePanel extends BaseGamePanel {
         int textW = fm.stringWidth(promptText);
         int textH = fm.getHeight();
 
-        int bx = heroX + heroW / 2 - textW / 2 - 8;
-        int by = heroY - textH - 12;
+        int bx = hero.getCenterX() - textW / 2 - 8;
+        int by = hero.getY() - textH - 12;
 
         g2.setColor(new Color(0, 0, 0, 160));
         g2.fillRoundRect(bx, by, textW + 16, textH + 8, 8, 8);
