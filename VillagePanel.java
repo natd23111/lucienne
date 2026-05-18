@@ -44,6 +44,14 @@ public class VillagePanel extends BaseGamePanel {
     private Timer dialogueTimer;
     private String dialogueNpcName = "";
 
+    // Scroll collection overlay state
+    private boolean scrollOverlayActive = false;
+    private String scrollOverlayTitle = "";
+    private String scrollOverlayFullText = "";
+    private int scrollOverlayCharIndex = 0;
+    private boolean scrollOverlayTextComplete = false;
+    private Timer scrollOverlayTimer;
+
     public VillagePanel(CardLayout cardLayout, JPanel mainPanel, Player player, SoundManager soundManager) {
         super(cardLayout, mainPanel, player);
         this.soundManager = soundManager;
@@ -57,13 +65,8 @@ public class VillagePanel extends BaseGamePanel {
         scrollIcon = new ImageIcon("assets/icon_scroll.png").getImage();
         hero = new Hero(spriteSheet, heroSprite, 180, 320, 48, 64, 3);
 
-        zones.add(new InteractionZone(30, 100, 140, 100, "KnowledgeGarden", "Explore Knowledge Garden"));
-        zones.add(new InteractionZone(190, 100, 140, 100, "BattleGround", "Enter Battle Ground"));
-        zones.add(new InteractionZone(30, 400, 140, 100, "VillageShop", "Visit Village Shop"));
-        zones.add(new InteractionZone(190, 400, 140, 100, null, "Save Game"));
-        zones.add(new InteractionZone(300, 540, 50, 50, "Codex", "Open Codex"));
-
         loadNPCs();
+        loadZones();
         loadScrollFacts();
 
         gameLoop = new Timer(16, e -> {
@@ -82,6 +85,17 @@ public class VillagePanel extends BaseGamePanel {
             }
         });
 
+        scrollOverlayTimer = new Timer(28, e -> {
+            if (scrollOverlayCharIndex < scrollOverlayFullText.length()) {
+                scrollOverlayCharIndex++;
+                repaint();
+            } else if (!scrollOverlayTextComplete) {
+                scrollOverlayTextComplete = true;
+                scrollOverlayTimer.stop();
+                repaint();
+            }
+        });
+
         setFocusable(true);
         addKeyListener(new KeyAdapter() {
             @Override
@@ -93,6 +107,16 @@ public class VillagePanel extends BaseGamePanel {
                             skipDialogueTyping();
                         } else {
                             advanceDialogue();
+                        }
+                    }
+                    return;
+                }
+                if (scrollOverlayActive) {
+                    if (code == KeyEvent.VK_E || code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER) {
+                        if (!scrollOverlayTextComplete && scrollOverlayTimer.isRunning()) {
+                            skipScrollOverlayTyping();
+                        } else {
+                            dismissScrollOverlay();
                         }
                     }
                     return;
@@ -122,6 +146,12 @@ public class VillagePanel extends BaseGamePanel {
                         skipDialogueTyping();
                     } else {
                         advanceDialogue();
+                    }
+                } else if (scrollOverlayActive) {
+                    if (!scrollOverlayTextComplete && scrollOverlayTimer.isRunning()) {
+                        skipScrollOverlayTyping();
+                    } else {
+                        dismissScrollOverlay();
                     }
                 }
             }
@@ -235,10 +265,8 @@ public class VillagePanel extends BaseGamePanel {
                 String fact = getNextScrollFact();
                 if (fact != null) {
                     player.addCollectedScroll(fact);
-                    JOptionPane.showMessageDialog(this,
-                            "Knowledge Scroll Collected!\n\n" + fact,
-                            "Scroll of Knowledge", JOptionPane.INFORMATION_MESSAGE);
-                    clearInputState();
+                    showScrollOverlay("Scroll of Knowledge",
+                            "Knowledge Scroll Collected!\n\n" + fact);
                 }
             }
         }
@@ -285,6 +313,10 @@ public class VillagePanel extends BaseGamePanel {
 
         if (inDialogue) {
             drawDialogueOverlay(g);
+        }
+
+        if (scrollOverlayActive) {
+            drawScrollOverlay(g);
         }
     }
 
@@ -379,6 +411,40 @@ public class VillagePanel extends BaseGamePanel {
         }
     }
 
+    private void loadZones() {
+        try (BufferedReader reader = new BufferedReader(new FileReader("zones.txt"))) {
+            int x = 0, y = 0, w = 0, h = 0;
+            String target = null;
+            String prompt = null;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+
+                if (line.startsWith("X:")) {
+                    x = Integer.parseInt(line.substring(2).trim());
+                } else if (line.startsWith("Y:")) {
+                    y = Integer.parseInt(line.substring(2).trim());
+                } else if (line.startsWith("W:")) {
+                    w = Integer.parseInt(line.substring(2).trim());
+                } else if (line.startsWith("H:")) {
+                    h = Integer.parseInt(line.substring(2).trim());
+                } else if (line.startsWith("TARGET:")) {
+                    String val = line.substring(7).trim();
+                    target = (val.equalsIgnoreCase("none") || val.isEmpty()) ? null : val;
+                } else if (line.startsWith("PROMPT:")) {
+                    prompt = line.substring(7).trim();
+                } else if (line.equals("END") && prompt != null) {
+                    zones.add(new InteractionZone(x, y, w, h, target, prompt));
+                    target = null;
+                    prompt = null;
+                }
+            }
+        } catch (IOException | NumberFormatException e) {
+            System.err.println("Could not load zones: " + e.getMessage());
+        }
+    }
+
     private void loadScrollFacts() {
         try (BufferedReader reader = new BufferedReader(new FileReader("scrolls.txt"))) {
             String line;
@@ -444,6 +510,31 @@ public class VillagePanel extends BaseGamePanel {
         dialogueTimer.stop();
         dialogueLines.clear();
         dialogueNpcName = "";
+        clearInputState();
+        repaint();
+    }
+
+    private void showScrollOverlay(String title, String text) {
+        scrollOverlayActive = true;
+        scrollOverlayTitle = title;
+        scrollOverlayFullText = text;
+        scrollOverlayCharIndex = 0;
+        scrollOverlayTextComplete = false;
+        scrollOverlayTimer.start();
+        clearInputState();
+        repaint();
+    }
+
+    private void skipScrollOverlayTyping() {
+        scrollOverlayCharIndex = scrollOverlayFullText.length();
+        scrollOverlayTextComplete = true;
+        scrollOverlayTimer.stop();
+        repaint();
+    }
+
+    private void dismissScrollOverlay() {
+        scrollOverlayActive = false;
+        scrollOverlayTimer.stop();
         clearInputState();
         repaint();
     }
@@ -530,6 +621,74 @@ public class VillagePanel extends BaseGamePanel {
             FontMetrics fmHint = g2.getFontMetrics();
             int hw = fmHint.stringWidth(hint);
             g2.drawString(hint, (w - hw) / 2, DIALOGUE_TOP + bh - 10);
+        }
+
+        g2.dispose();
+    }
+
+    private void drawScrollOverlay(Graphics g) {
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        g.setColor(new Color(0, 0, 0, 245));
+        g.fillRect(0, 0, w, h);
+
+        int margin = 20;
+        int top = 160;
+        int bw = w - margin * 2;
+        int bh = 180;
+
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        g2.setColor(new Color(10, 10, 30, 230));
+        g2.fillRoundRect(margin, top, bw, bh, 18, 18);
+        g2.setColor(new Color(255, 215, 0, 90));
+        g2.setStroke(new BasicStroke(2));
+        g2.drawRoundRect(margin, top, bw, bh, 18, 18);
+
+        g2.setColor(new Color(255, 215, 0));
+        g2.setFont(new Font("Serif", Font.BOLD, 16));
+        FontMetrics fmTitle = g2.getFontMetrics();
+        int tw = fmTitle.stringWidth(scrollOverlayTitle);
+        g2.drawString(scrollOverlayTitle, (w - tw) / 2, top - 12);
+
+        g2.setFont(new Font("Serif", Font.PLAIN, 14));
+        g2.setColor(new Color(220, 220, 240));
+        FontMetrics fm = g2.getFontMetrics();
+        int lineH = fm.getHeight();
+        int textX = margin + 16;
+        int maxTextW = bw - 32;
+        int textBottom = top + bh - 28;
+
+        String visible = scrollOverlayFullText.substring(0, Math.min(scrollOverlayCharIndex, scrollOverlayFullText.length()));
+        String[] rawLines = visible.split("\n", -1);
+
+        int y = top + 32;
+        lineLoop:
+        for (int li = 0; li < rawLines.length; li++) {
+            List<String> wrapped = wrapText(rawLines[li], fm, maxTextW);
+            for (int wi = 0; wi < wrapped.size(); wi++) {
+                if (y + lineH > textBottom) break lineLoop;
+                g2.drawString(wrapped.get(wi), textX, y);
+                y += lineH;
+            }
+        }
+
+        if (!scrollOverlayTextComplete && scrollOverlayTimer.isRunning() && scrollOverlayCharIndex < scrollOverlayFullText.length()) {
+            g2.setColor(new Color(255, 215, 0));
+            g2.fillRect(textX, y - lineH + fm.getAscent() + 2, 7, 3);
+        }
+
+        if (scrollOverlayTextComplete) {
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            g2.setColor(new Color(180, 160, 140));
+            String hint = "Press E, Space, Enter or Click to continue";
+            FontMetrics fmHint = g2.getFontMetrics();
+            int hw = fmHint.stringWidth(hint);
+            g2.drawString(hint, (w - hw) / 2, top + bh - 10);
         }
 
         g2.dispose();

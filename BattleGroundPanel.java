@@ -6,6 +6,8 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +31,15 @@ public class BattleGroundPanel extends BaseGamePanel {
 
     private List<Question> allQuestions;
     private boolean questionsLoaded;
+
+    // Overlay state for encounter messages
+    private boolean overlayActive = false;
+    private String overlayTitle = "";
+    private String overlayFullText = "";
+    private int overlayCharIndex = 0;
+    private boolean overlayTextComplete = false;
+    private Timer overlayTimer;
+    private Runnable overlayCallback;
 
     public BattleGroundPanel(CardLayout cardLayout, JPanel mainPanel, Player player,
             VillagePanel villagePanel, BattlePanel battlePanel,
@@ -64,11 +75,32 @@ public class BattleGroundPanel extends BaseGamePanel {
             }
         });
 
+        overlayTimer = new Timer(28, e -> {
+            if (overlayCharIndex < overlayFullText.length()) {
+                overlayCharIndex++;
+                repaint();
+            } else if (!overlayTextComplete) {
+                overlayTextComplete = true;
+                overlayTimer.stop();
+                repaint();
+            }
+        });
+
         setFocusable(true);
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 int code = e.getKeyCode();
+                if (overlayActive) {
+                    if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER || code == KeyEvent.VK_E) {
+                        if (!overlayTextComplete && overlayTimer.isRunning()) {
+                            skipOverlayTyping();
+                        } else {
+                            dismissOverlay();
+                        }
+                    }
+                    return;
+                }
                 if (code >= 0 && code < keys.length) {
                     keys[code] = true;
                 }
@@ -79,6 +111,19 @@ public class BattleGroundPanel extends BaseGamePanel {
                 int code = e.getKeyCode();
                 if (code >= 0 && code < keys.length) {
                     keys[code] = false;
+                }
+            }
+        });
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (overlayActive) {
+                    if (!overlayTextComplete && overlayTimer.isRunning()) {
+                        skipOverlayTyping();
+                    } else {
+                        dismissOverlay();
+                    }
                 }
             }
         });
@@ -100,6 +145,11 @@ public class BattleGroundPanel extends BaseGamePanel {
     }
 
     private void updateGame() {
+        if (overlayActive) {
+            hero.resetAnimation();
+            return;
+        }
+
         hero.update(
             keys[KeyEvent.VK_W] || keys[KeyEvent.VK_UP],
             keys[KeyEvent.VK_S] || keys[KeyEvent.VK_DOWN],
@@ -135,26 +185,26 @@ public class BattleGroundPanel extends BaseGamePanel {
             return;
         }
 
-        List<Question> battleQuestions = new ArrayList<>(allQuestions);
-        Collections.shuffle(battleQuestions);
-        if (battleQuestions.size() > 5) {
-            battleQuestions = battleQuestions.subList(0, 5);
+        List<Question> temp = new ArrayList<>(allQuestions);
+        Collections.shuffle(temp);
+        if (temp.size() > 5) {
+            temp = new ArrayList<>(temp.subList(0, 5));
         }
+        final List<Question> battleQuestions = temp;
 
         String[] enemies = { "Fractured Geometry", "Corrupted Literacy",
                 "Faded Science", "Twisted History", "Shadow of Ignorance",
                 "Fractured Memory", "Dark Calculation", "Lost Knowledge" };
-        String enemyName = enemies[random.nextInt(enemies.length)];
+        final String enemyName = enemies[random.nextInt(enemies.length)];
 
         soundManager.playDamage();
-        JOptionPane.showMessageDialog(this,
+        showEncounterOverlay("Encounter!",
                 "An Evil Memory Fragment materializes from the mist!\n\n\""
-                        + enemyName + " appears before you...\"");
-        clearInputState();
-
-        battlePanel.setReturnScreen("BattleGround");
-        battlePanel.startBattle(battleQuestions, enemyName);
-        cardLayout.show(mainPanel, "BattleQuiz");
+                        + enemyName + " appears before you...\"", () -> {
+            battlePanel.setReturnScreen("BattleGround");
+            battlePanel.startBattle(battleQuestions, enemyName);
+            cardLayout.show(mainPanel, "BattleQuiz");
+        });
     }
 
     private void activate() {
@@ -169,6 +219,151 @@ public class BattleGroundPanel extends BaseGamePanel {
         gameLoop.stop();
         hero.resetAnimation();
         for (int i = 0; i < keys.length; i++) keys[i] = false;
+        if (overlayActive) {
+            overlayTimer.stop();
+            overlayActive = false;
+            overlayCallback = null;
+        }
+    }
+
+    private void showEncounterOverlay(String title, String text, Runnable onDismiss) {
+        overlayActive = true;
+        overlayTitle = title;
+        overlayFullText = text;
+        overlayCharIndex = 0;
+        overlayTextComplete = false;
+        overlayCallback = onDismiss;
+        overlayTimer.start();
+        repaint();
+    }
+
+    private void skipOverlayTyping() {
+        overlayCharIndex = overlayFullText.length();
+        overlayTextComplete = true;
+        overlayTimer.stop();
+        repaint();
+    }
+
+    private void dismissOverlay() {
+        overlayActive = false;
+        overlayTimer.stop();
+        repaint();
+        if (overlayCallback != null) {
+            Runnable cb = overlayCallback;
+            overlayCallback = null;
+            cb.run();
+        }
+    }
+
+    private void drawOverlay(Graphics g) {
+        if (!overlayActive) return;
+
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        g.setColor(new Color(0, 0, 0, 245));
+        g.fillRect(0, 0, w, h);
+
+        int margin = 20;
+        int top = 160;
+        int bw = w - margin * 2;
+        int bh = 180;
+
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        g2.setColor(new Color(10, 10, 30, 230));
+        g2.fillRoundRect(margin, top, bw, bh, 18, 18);
+        g2.setColor(new Color(255, 215, 0, 90));
+        g2.setStroke(new BasicStroke(2));
+        g2.drawRoundRect(margin, top, bw, bh, 18, 18);
+
+        g2.setColor(new Color(255, 215, 0));
+        g2.setFont(new Font("Serif", Font.BOLD, 16));
+        FontMetrics fmTitle = g2.getFontMetrics();
+        int tw = fmTitle.stringWidth(overlayTitle);
+        g2.drawString(overlayTitle, (w - tw) / 2, top - 12);
+
+        g2.setFont(new Font("Serif", Font.PLAIN, 14));
+        g2.setColor(new Color(220, 220, 240));
+        FontMetrics fm = g2.getFontMetrics();
+        int lineH = fm.getHeight();
+        int textX = margin + 16;
+        int maxTextW = bw - 32;
+        int textBottom = top + bh - 28;
+
+        String visible = overlayFullText.substring(0, Math.min(overlayCharIndex, overlayFullText.length()));
+        String[] rawLines = visible.split("\n", -1);
+
+        int y = top + 32;
+        lineLoop:
+        for (int li = 0; li < rawLines.length; li++) {
+            List<String> wrapped = wrapOverlayText(rawLines[li], fm, maxTextW);
+            for (int wi = 0; wi < wrapped.size(); wi++) {
+                if (y + lineH > textBottom) break lineLoop;
+                g2.drawString(wrapped.get(wi), textX, y);
+                y += lineH;
+            }
+        }
+
+        if (!overlayTextComplete && overlayTimer.isRunning() && overlayCharIndex < overlayFullText.length()) {
+            g2.setColor(new Color(255, 215, 0));
+            g2.fillRect(textX, y - lineH + fm.getAscent() + 2, 7, 3);
+        }
+
+        if (overlayTextComplete) {
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            g2.setColor(new Color(180, 160, 140));
+            String hint = "Press Space, Enter or Click to continue";
+            FontMetrics fmHint = g2.getFontMetrics();
+            int hw = fmHint.stringWidth(hint);
+            g2.drawString(hint, (w - hw) / 2, top + bh - 10);
+        }
+
+        g2.dispose();
+    }
+
+    private List<String> wrapOverlayText(String text, FontMetrics fm, int maxWidth) {
+        List<String> lines = new ArrayList<>();
+        if (text.isEmpty()) {
+            lines.add("");
+            return lines;
+        }
+
+        String[] words = text.split(" ", -1);
+        StringBuilder line = new StringBuilder();
+
+        for (String word : words) {
+            String candidate = line.length() == 0 ? word : line + " " + word;
+            if (fm.stringWidth(candidate) <= maxWidth) {
+                if (line.length() > 0) line.append(" ");
+                line.append(word);
+            } else {
+                if (line.length() > 0) {
+                    lines.add(line.toString());
+                    line = new StringBuilder();
+                }
+                if (fm.stringWidth(word) <= maxWidth) {
+                    line.append(word);
+                } else {
+                    StringBuilder part = new StringBuilder();
+                    for (int i = 0; i < word.length(); i++) {
+                        char c = word.charAt(i);
+                        if (fm.stringWidth(part.toString() + c) > maxWidth && part.length() > 0) {
+                            lines.add(part.toString());
+                            part = new StringBuilder();
+                        }
+                        part.append(c);
+                    }
+                    if (part.length() > 0) line.append(part.toString());
+                }
+            }
+        }
+
+        if (line.length() > 0) lines.add(line.toString());
+        return lines;
     }
 
     @Override
@@ -183,6 +378,7 @@ public class BattleGroundPanel extends BaseGamePanel {
 
         drawHero(g);
         drawHUD(g);
+        drawOverlay(g);
     }
 
     private void drawHero(Graphics g) {

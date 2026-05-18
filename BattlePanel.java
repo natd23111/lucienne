@@ -2,6 +2,8 @@ package Project;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -44,6 +46,15 @@ public class BattlePanel extends BaseGamePanel {
     private JButton potionBtn;
     private JButton charmBtn;
 
+    // Overlay state for in-panel messages
+    private boolean overlayActive = false;
+    private String overlayTitle = "";
+    private String overlayFullText = "";
+    private int overlayCharIndex = 0;
+    private boolean overlayTextComplete = false;
+    private Timer overlayTimer;
+    private Runnable overlayCallback;
+
     private static final Color GOLD = new Color(255, 215, 0);
     private static final Color DARK_BG = new Color(8, 6, 28);
     private static final Color CARD_BG = new Color(14, 12, 40, 210);
@@ -83,11 +94,51 @@ public class BattlePanel extends BaseGamePanel {
 
         fleeBtn = createStyledButton("Flee to Village");
         fleeBtn.addActionListener(e -> {
+            if (overlayActive) return;
             animTimer.stop();
             cardLayout.show(mainPanel, "Village");
             villagePanel.requestFocusInWindow();
         });
         add(fleeBtn);
+
+        overlayTimer = new Timer(28, e -> {
+            if (overlayCharIndex < overlayFullText.length()) {
+                overlayCharIndex++;
+                repaint();
+            } else if (!overlayTextComplete) {
+                overlayTextComplete = true;
+                overlayTimer.stop();
+                repaint();
+            }
+        });
+
+        setFocusable(true);
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (!overlayActive) return;
+                int code = e.getKeyCode();
+                if (code == KeyEvent.VK_SPACE || code == KeyEvent.VK_ENTER || code == KeyEvent.VK_E) {
+                    if (!overlayTextComplete && overlayTimer.isRunning()) {
+                        skipOverlayTyping();
+                    } else {
+                        dismissOverlay();
+                    }
+                }
+            }
+        });
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!overlayActive) return;
+                if (!overlayTextComplete && overlayTimer.isRunning()) {
+                    skipOverlayTyping();
+                } else {
+                    dismissOverlay();
+                }
+            }
+        });
 
         animTimer = new Timer(30, e -> {
             enemyPhase += 0.05;
@@ -116,7 +167,7 @@ public class BattlePanel extends BaseGamePanel {
         }
 
         enemyX = getWidth() / 4;
-        enemyY = 130;
+        enemyY = 90;
         enemyPhase = 0;
         enemyRotate = 0;
         animTimer.start();
@@ -196,7 +247,10 @@ public class BattlePanel extends BaseGamePanel {
             btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
             final int idx = i;
-            btn.addActionListener(e -> handleAnswer(q, options.get(idx), idx));
+            btn.addActionListener(e -> {
+                if (overlayActive) return;
+                handleAnswer(q, options.get(idx), idx);
+            });
 
             btn.addMouseListener(new MouseAdapter() {
                 public void mouseEntered(MouseEvent e) { btn.setForeground(Color.WHITE); }
@@ -263,11 +317,11 @@ public class BattlePanel extends BaseGamePanel {
         int cardX = 20;
         int cardW = w - 40;
 
-        questionLabel.setBounds(cardX + 10, 100, cardW - 20, 70);
+        questionLabel.setBounds(cardX + 10, 205, cardW - 20, 70);
 
         progressLabel.setBounds(cardX, 22, cardW, 20);
 
-        int itemY = learningMode ? 280 : 280;
+        int itemY = 330;
         itemBar.setBounds(cardX, itemY, cardW, 30);
 
         fleeBtn.setBounds(cardX, h - 60, cardW, 38);
@@ -317,19 +371,22 @@ public class BattlePanel extends BaseGamePanel {
     }
 
     private void useKnowledgePotion() {
+        if (overlayActive) return;
         if (inventory.useKnowledgePotion()) {
             Question q = currentQuestions.get(currentQuestionIndex);
             correctAnswersCount++;
             player.addScore(10);
-            JOptionPane.showMessageDialog(this,
-                    "Knowledge Potion used! " + q.getCorrectAnswer() + " is correct.");
             soundManager.playCorrect();
-            currentQuestionIndex++;
-            showNextQuestion();
+            showOverlayMessage("Potion Used",
+                    "Knowledge Potion used! " + q.getCorrectAnswer() + " is correct.", () -> {
+                currentQuestionIndex++;
+                showNextQuestion();
+            });
         }
     }
 
     private void useMemoryCharm() {
+        if (overlayActive) return;
         if (inventory.useMemoryCharm()) {
             Question q = currentQuestions.get(currentQuestionIndex);
             List<String> options = q.getOptions();
@@ -368,7 +425,7 @@ public class BattlePanel extends BaseGamePanel {
     }
 
     private void handleAnswer(Question q, String selected, int optionIndex) {
-        if (hiddenOptionIndices.contains(optionIndex)) return;
+        if (overlayActive || hiddenOptionIndices.contains(optionIndex)) return;
 
         if (q.checkAnswer(selected)) {
             correctAnswersCount++;
@@ -377,27 +434,33 @@ public class BattlePanel extends BaseGamePanel {
             if (!learningMode) player.addXp(3);
             flashCorrect();
             soundManager.playCorrect();
-            if (learningMode) {
-                JOptionPane.showMessageDialog(this,
-                        "Correct! \"" + q.getCorrectAnswer() + "\" is right.");
-            } else {
-                JOptionPane.showMessageDialog(this, "Correct! The fragment weakens...");
-            }
+            String title = "Correct!";
+            String text = learningMode
+                    ? "\"" + q.getCorrectAnswer() + "\" is right."
+                    : "The fragment weakens...";
+            showOverlayMessage(title, text, () -> {
+                currentQuestionIndex++;
+                showNextQuestion();
+            });
         } else {
             flashWrong();
             soundManager.playWrong();
+            String title;
+            String text;
             if (!learningMode) {
                 int penalty = Math.min(5, player.getScore());
                 if (penalty > 0) player.setScore(player.getScore() - penalty);
-                JOptionPane.showMessageDialog(this,
-                        "Incorrect. The fragment grows stronger...\n(-" + penalty + " KP)");
+                title = "Incorrect!";
+                text = "The fragment grows stronger...\n(-" + penalty + " KP)";
             } else {
-                JOptionPane.showMessageDialog(this,
-                        "Not quite. The correct answer is: " + q.getCorrectAnswer());
+                title = "Not quite...";
+                text = "The correct answer is: " + q.getCorrectAnswer();
             }
+            showOverlayMessage(title, text, () -> {
+                currentQuestionIndex++;
+                showNextQuestion();
+            });
         }
-        currentQuestionIndex++;
-        showNextQuestion();
     }
 
     private void flashCorrect() {
@@ -426,30 +489,37 @@ public class BattlePanel extends BaseGamePanel {
             double pct = ((double) correctAnswersCount / total) * 100;
             if (pct >= 80 && learningCategory != null) {
                 player.masterCategory(learningCategory);
-                JOptionPane.showMessageDialog(this,
-                        "Category Mastered: " + learningCategory + "!\n"
-                                + "Score: " + correctAnswersCount + "/" + total
-                                + "\n\nThis knowledge will now help you in the Battleground.");
+                String text = "Score: " + correctAnswersCount + "/" + total
+                        + "\n\nThis knowledge will now help you in the Battleground.";
+                showOverlayMessage("Category Mastered: " + learningCategory + "!", text, this::doFinishBattleCleanup);
             } else {
-                JOptionPane.showMessageDialog(this,
-                        "Study Result: " + correctAnswersCount + "/" + total
-                                + "\n\nScore 80% or higher to master this category.");
+                String text = "Study Result: " + correctAnswersCount + "/" + total
+                        + "\n\nScore 80% or higher to master this category.";
+                showOverlayMessage("Study Complete", text, this::doFinishBattleCleanup);
             }
         } else {
             String message = battleEngine.getMotivationalMessage(correctAnswersCount, total);
             soundManager.playVictory();
-            JOptionPane.showMessageDialog(this,
-                    "Battle Result: " + correctAnswersCount + "/" + total
-                            + "\n" + message + "\nLevel: " + player.getLevel()
-                            + " | XP: " + player.getXp() + "/15");
+            String text = "Battle Result: " + correctAnswersCount + "/" + total
+                    + "\n" + message + "\nLevel: " + player.getLevel()
+                    + " | XP: " + player.getXp() + "/15";
+            showOverlayMessage("Victory!", text, this::doFinishBattleCleanup);
         }
+    }
 
+    private void doFinishBattleCleanup() {
         try {
             progressManager.saveProgress(player);
         } catch (GameDataException ex) {
-            JOptionPane.showMessageDialog(this, "Error saving game: " + ex.getMessage(),
-                    "Save Error", JOptionPane.ERROR_MESSAGE);
+            showOverlayMessage("Save Error", "Error saving game: " + ex.getMessage(), () -> {
+                returnToVillage();
+            });
+            return;
         }
+        returnToVillage();
+    }
+
+    private void returnToVillage() {
         villagePanel.updateDisplay();
         cardLayout.show(mainPanel, returnScreen);
         if (returnScreen.equals("Village")) {
@@ -458,6 +528,158 @@ public class BattlePanel extends BaseGamePanel {
         returnScreen = "Village";
         learningMode = false;
         learningCategory = null;
+    }
+
+    private void showOverlayMessage(String title, String text, Runnable onDismiss) {
+        overlayActive = true;
+        overlayTitle = title;
+        overlayFullText = text;
+        overlayCharIndex = 0;
+        overlayTextComplete = false;
+        overlayCallback = onDismiss;
+        setQuizComponentsVisible(false);
+        overlayTimer.start();
+        repaint();
+    }
+
+    private void skipOverlayTyping() {
+        overlayCharIndex = overlayFullText.length();
+        overlayTextComplete = true;
+        overlayTimer.stop();
+        repaint();
+    }
+
+    private void dismissOverlay() {
+        overlayActive = false;
+        overlayTimer.stop();
+        setQuizComponentsVisible(true);
+        repaint();
+        if (overlayCallback != null) {
+            Runnable cb = overlayCallback;
+            overlayCallback = null;
+            cb.run();
+        }
+    }
+
+    private void setQuizComponentsVisible(boolean visible) {
+        questionLabel.setVisible(visible);
+        progressLabel.setVisible(visible);
+        itemBar.setVisible(visible);
+        fleeBtn.setVisible(visible);
+        for (JButton btn : optionBtns) {
+            btn.setVisible(visible);
+        }
+    }
+
+    private void drawOverlay(Graphics g) {
+        if (!overlayActive) return;
+
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        g.setColor(new Color(0, 0, 0, 245));
+        g.fillRect(0, 0, w, h);
+
+        int margin = 20;
+        int top = 160;
+        int bw = w - margin * 2;
+        int bh = 150;
+
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        g2.setColor(new Color(10, 10, 30, 230));
+        g2.fillRoundRect(margin, top, bw, bh, 18, 18);
+        g2.setColor(new Color(255, 215, 0, 90));
+        g2.setStroke(new BasicStroke(2));
+        g2.drawRoundRect(margin, top, bw, bh, 18, 18);
+
+        g2.setColor(GOLD);
+        g2.setFont(new Font("Serif", Font.BOLD, 16));
+        FontMetrics fmTitle = g2.getFontMetrics();
+        int tw = fmTitle.stringWidth(overlayTitle);
+        g2.drawString(overlayTitle, (w - tw) / 2, top - 12);
+
+        g2.setFont(new Font("Serif", Font.PLAIN, 14));
+        g2.setColor(new Color(220, 220, 240));
+        FontMetrics fm = g2.getFontMetrics();
+        int lineH = fm.getHeight();
+        int textX = margin + 16;
+        int maxTextW = bw - 32;
+        int textBottom = top + bh - 28;
+
+        String visible = overlayFullText.substring(0, Math.min(overlayCharIndex, overlayFullText.length()));
+        String[] rawLines = visible.split("\n", -1);
+
+        int y = top + 32;
+        lineLoop:
+        for (int li = 0; li < rawLines.length; li++) {
+            List<String> wrapped = wrapOverlayText(rawLines[li], fm, maxTextW);
+            for (int wi = 0; wi < wrapped.size(); wi++) {
+                if (y + lineH > textBottom) break lineLoop;
+                g2.drawString(wrapped.get(wi), textX, y);
+                y += lineH;
+            }
+        }
+
+        if (!overlayTextComplete && overlayTimer.isRunning() && overlayCharIndex < overlayFullText.length()) {
+            g2.setColor(GOLD);
+            g2.fillRect(textX, y - lineH + fm.getAscent() + 2, 7, 3);
+        }
+
+        if (overlayTextComplete) {
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            g2.setColor(new Color(180, 160, 140));
+            String hint = "Press Space, Enter or Click to continue";
+            FontMetrics fmHint = g2.getFontMetrics();
+            int hw = fmHint.stringWidth(hint);
+            g2.drawString(hint, (w - hw) / 2, top + bh - 10);
+        }
+
+        g2.dispose();
+    }
+
+    private List<String> wrapOverlayText(String text, FontMetrics fm, int maxWidth) {
+        List<String> lines = new ArrayList<>();
+        if (text.isEmpty()) {
+            lines.add("");
+            return lines;
+        }
+
+        String[] words = text.split(" ", -1);
+        StringBuilder line = new StringBuilder();
+
+        for (String word : words) {
+            String candidate = line.length() == 0 ? word : line + " " + word;
+            if (fm.stringWidth(candidate) <= maxWidth) {
+                if (line.length() > 0) line.append(" ");
+                line.append(word);
+            } else {
+                if (line.length() > 0) {
+                    lines.add(line.toString());
+                    line = new StringBuilder();
+                }
+                if (fm.stringWidth(word) <= maxWidth) {
+                    line.append(word);
+                } else {
+                    StringBuilder part = new StringBuilder();
+                    for (int i = 0; i < word.length(); i++) {
+                        char c = word.charAt(i);
+                        if (fm.stringWidth(part.toString() + c) > maxWidth && part.length() > 0) {
+                            lines.add(part.toString());
+                            part = new StringBuilder();
+                        }
+                        part.append(c);
+                    }
+                    if (part.length() > 0) line.append(part.toString());
+                }
+            }
+        }
+
+        if (line.length() > 0) lines.add(line.toString());
+        return lines;
     }
 
     @Override
@@ -477,7 +699,9 @@ public class BattlePanel extends BaseGamePanel {
             drawEnemyHPBar(g2);
         }
 
-        drawQuestionCard(g2, w);
+        if (!overlayActive) {
+            drawQuestionCard(g2, w);
+        }
 
         if (flashColor != null) {
             g2.setColor(flashColor);
@@ -485,6 +709,8 @@ public class BattlePanel extends BaseGamePanel {
         }
 
         g2.dispose();
+
+        drawOverlay(g);
     }
 
     private void drawBackground(Graphics2D g2, int w, int h) {
@@ -510,9 +736,9 @@ public class BattlePanel extends BaseGamePanel {
 
     private void drawQuestionCard(Graphics2D g2, int w) {
         int cardX = 18;
-        int cardY = 50;
+        int cardY = 190;
         int cardW = w - 36;
-        int cardH = 145;
+        int cardH = 95;
 
         g2.setColor(CARD_BG);
         g2.fillRoundRect(cardX, cardY, cardW, cardH, 14, 14);

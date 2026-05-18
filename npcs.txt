@@ -18,8 +18,8 @@ DIALOGUE:Literacy and numeracy are the very foundations for all future learning.
 END
 
 NAME:Elder Tomas
-X:100
-Y:490
+X:220
+Y:480
 SPRITE:npc_villager_02.png
 DIALOGUE:Did you know? Over 244 million children and youth are still out of school worldwide.
 DIALOGUE:Gender equality in education is a key target - girls and boys must have equal access to learning.
@@ -27,7 +27,7 @@ DIALOGUE:Inclusive education means students with disabilities, refugees, and tho
 END
 
 NAME:Shopkeeper Mira
-X:220
+X:100
 Y:480
 SPRITE:npc_shopkeeper.png
 DIALOGUE:Welcome to the Village Shop! I sell items that can help you in your quiz battles.

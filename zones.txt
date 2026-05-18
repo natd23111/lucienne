@@ -1,0 +1,39 @@
+X:50
+Y:150
+W:50
+H:50
+TARGET:KnowledgeGarden
+PROMPT:Explore Knowledge Garden
+END
+
+X:250
+Y:170
+W:50
+H:50
+TARGET:BattleGround
+PROMPT:Enter Battle Ground
+END
+
+X:60
+Y:450
+W:30
+H:30
+TARGET:VillageShop
+PROMPT:Visit Village Shop
+END
+
+X:250
+Y:350
+W:30
+H:30
+TARGET:none
+PROMPT:Save Game
+END
+
+X:300
+Y:540
+W:1
+H:1
+TARGET:Codex
+PROMPT:Open Codex
+END
