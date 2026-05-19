@@ -335,8 +335,8 @@ public class VillagePanel extends BaseGamePanel {
         int textW = fm.stringWidth(promptText);
         int textH = fm.getHeight();
 
-        int bx = hero.getCenterX() - textW / 2 - 8;
-        int by = hero.getY() - textH - 12;
+        int bx = (getWidth() - textW) / 2 - 8;
+        int by = getHeight() - textH - 24;
 
         g2.setColor(new Color(0, 0, 0, 160));
         g2.fillRoundRect(bx, by, textW + 16, textH + 8, 8, 8);
